@@ -2931,6 +2931,7 @@ int zEulerSweep(int j, int NumberOfSubgrids, fluxes *SubgridFluxes[],
                  int NumberOfColours, int colnum[],
                  float ** Fluxes);
 
+  int ComputeAverageQuantities();
   //Variables
     //CenteredB is used in the Riemann solver (SolveMHDequations) and the timestep (dtMagnetic)
   //MagneticField is the face centered magnetic field, and is the quantity ultimately updated by the 

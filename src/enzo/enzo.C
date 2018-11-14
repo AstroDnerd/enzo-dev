@@ -25,12 +25,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
- 
 #define DEFINE_STORAGE
 #include "EnzoTiming.h"
 #include "ErrorExceptions.h"
 #include "performance.h"
 #include "macros_and_parameters.h"
+#include "AverageQuantities.h"
 #include "typedefs.h"
 #include "global_data.h"
 #include "units.h"
