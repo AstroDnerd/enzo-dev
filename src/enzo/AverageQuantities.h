@@ -13,6 +13,7 @@ struct BaryonFieldIndex{
 };
 
 typedef std::map<int , float> QuanMap;
+#define AVERAGE_ARGS float ** BaryonField, int index, int * GridDimenision, BaryonFieldIndex Ind
 
 class average_root{
     public:
@@ -20,35 +21,32 @@ class average_root{
     float current_mean;
     int id;
     char * label;
-    virtual void addup(float ** BaryonField, int index, int * GridDimenision,
-                        BaryonFieldIndex Ind){
+    virtual void addup(AVERAGE_ARGS){
         this->current_mean += 1;
     }
 };
 typedef std::map<char *,average_root *> AvgQuanMapType;
 EXTERN AvgQuanMapType AvgMap;
+EXTERN AvgQuanMapType FirstMoments;
+EXTERN AvgQuanMapType SecondMoments;
 EXTERN average_root avg_root;
-
 class average_density: public average_root{
     public:
-    virtual void addup(float ** BaryonField, int index, int * GridDimenision,
-                        BaryonFieldIndex Ind){
+    virtual void addup(AVERAGE_ARGS){
         this->current_mean += BaryonField[Ind.Dens][index]*Ind.Volume;
     }
 };
 EXTERN average_density avg_density;
+
 class square_density: public average_root{
-    public:
-    virtual void addup(float ** BaryonField, int index, int * GridDimenision,
-                        BaryonFieldIndex Ind){
+    public: virtual void addup(AVERAGE_ARGS){
         this->current_mean += BaryonField[Ind.Dens][index]*BaryonField[Ind.Dens][index]*Ind.Volume;
     }
 };
 EXTERN square_density std_density;
 
 class total_volume: public average_root{
-    public:
-    virtual void addup(float ** BaryonField, int index, int * GridDimenision, BaryonFieldIndex Ind){
+    public: virtual void addup(AVERAGE_ARGS){
         this->current_mean += Ind.Volume;
     }
 };
@@ -56,8 +54,7 @@ EXTERN total_volume tot_vol;
 
 class avg_scalar: public average_root{
     //this is for scalar quantities like cycle and time.
-    public:
-    virtual void addup(float ** BaryonField, int index, int * GridDimenision, BaryonFieldIndex Ind){
+    public: virtual void addup(AVERAGE_ARGS){
         //doesn't do anything.
     }
 };

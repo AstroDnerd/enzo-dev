@@ -34,8 +34,22 @@
 #include "CommunicationUtilities.h"
 void SetupAverageQuantities(){
     if (  AvgMap.empty() ){
-      AvgMap["root"]=&avg_root;
-      AvgMap["density"]=&avg_density;
+      AvgMap["root"]   =&avg_root;
+      AvgMap["cycle"]  =&avg_cycle;
+      AvgMap["time"]   =&avg_time;
+      AvgMap["volume"] =&tot_vol;
+      FirstMoments["density"]=&avg_density;
+      SecondMoments["density"]=&std_density;
+      for ( AvgQuanMapType::iterator it1=FirstMoments.begin(); it1!= FirstMoments.end(); it1++){
+          char * label = new  char[MAX_LINE_LENGTH];
+          sprintf( label, "%s_avg", it1->first);
+          AvgMap[label] = it1->second;
+      }
+      for ( AvgQuanMapType::iterator it1=SecondMoments.begin(); it1!= SecondMoments.end(); it1++){
+         char * label = new  char[MAX_LINE_LENGTH];
+         sprintf( label, "%s_std", it1->first);
+         AvgMap[label] = it1->second;
+      }
     }
     for ( AvgQuanMapType::iterator it1=AvgMap.begin(); it1!= AvgMap.end(); it1++){
         it1->second->current_mean=0;
@@ -51,7 +65,6 @@ void DeSerializeAverageQuantities( float * AllQuantities, int cycle){
     int n=0;
     for ( AvgQuanMapType::iterator it1=AvgMap.begin(); it1!= AvgMap.end(); it1++,n++){
         if ( MyProcessorNumber == ROOT_PROCESSOR ){
-            fprintf(stderr, "CLOWN mean %s %f (cycle %d) \n",it1->first, AllQuantities[n], cycle);
             it1->second->list[cycle] = AllQuantities[n];
         }
 
@@ -61,7 +74,6 @@ float * DeSerializeQ( char * quan){
     float * out = new float [ AvgMap[quan]->list.size()];
     int n=0;
     for ( QuanMap::iterator it1=AvgMap[quan]->list.begin(); it1!= AvgMap[quan]->list.end(); it1++,n++){
-        //fprintf(stderr,"CLOWN butts %s %f\n", quan, it1->second);
         out[n] = it1->second;
     }
     return out;
@@ -71,7 +83,6 @@ float * DeSerialize( QuanMap * thisone){
     float * out = new float [ thisone->size()];
     int n=0;
     for ( QuanMap::iterator it1=thisone->begin(); it1!= thisone->end(); it1++,n++){
-        //fprintf(stderr,"CLOWN butts %s %f\n", quan, it1->second);
         out[n] = it1->second;
     }
     return out;
@@ -121,6 +132,10 @@ int ComputeAverageQuantities( LevelHierarchyEntry *LevelArray[],
         int * LevelCycleCount, int * LevelSubCycleCount){
 
     SetupAverageQuantities();
+    if ( MyProcessorNumber == ROOT_PROCESSOR ){
+        AvgMap["time"]->current_mean = MetaData->Time;
+        AvgMap["cycle"]->current_mean = MetaData->CycleNumber;
+    }
     LevelHierarchyEntry *Temp = LevelArray[level];
     while (Temp != NULL) {
         Temp->GridData->ComputeAverageQuantities();
@@ -131,7 +146,21 @@ int ComputeAverageQuantities( LevelHierarchyEntry *LevelArray[],
 
     SerializeAverageQuantities( AllQuantities);
     CommunicationSumValues(AllQuantities, AvgMap.size());
-    DeSerializeAverageQuantities( AllQuantities, MetaData->CycleNumber);
+    int nCycle=MetaData->CycleNumber;
+    DeSerializeAverageQuantities( AllQuantities, nCycle);
+    //Store standard deviations, not variance
+    float d2, db, drms;
+    if ( MyProcessorNumber == ROOT_PROCESSOR ){
+        for ( AvgQuanMapType::iterator it1=SecondMoments.begin(); it1!= SecondMoments.end(); it1++){
+            d2 = SecondMoments[it1->first]->list[nCycle];
+            db=  FirstMoments[it1->first]->list[nCycle];
+            drms = POW(d2 - db*db,0.5);
+            it1->second->list[nCycle] = drms;
+
+
+        }
+    }
+
 
     delete AllQuantities;
 

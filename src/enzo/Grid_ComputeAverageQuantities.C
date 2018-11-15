@@ -81,11 +81,6 @@ int grid::ComputeAverageQuantities(){
                     it1->second->addup(BaryonField,index,GridDimension,BF);
                 }
             }
-//   for ( AvgQuanMapType::iterator it1=AvgMap.begin(); it1!= AvgMap.end(); it1++){
-//       std::cout << "CLOWN " << it1->first << " " << it1->second->current_mean << "\n";
-//   }
 
     return SUCCESS;
 }
-/* index stuff
-*/
