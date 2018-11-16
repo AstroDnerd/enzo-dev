@@ -39,7 +39,25 @@ void SetupAverageQuantities(){
       AvgMap["time"]   =&avg_time;
       AvgMap["volume"] =&tot_vol;
       FirstMoments["density"]=&avg_density;
+      FirstMoments["vx"]=&avg_vx;
+      FirstMoments["vy"]=&avg_vy;
+      FirstMoments["vz"]=&avg_vz;
+      FirstMoments["px"]=&avg_px;
+      FirstMoments["py"]=&avg_py;
+      FirstMoments["pz"]=&avg_pz;
+      FirstMoments["bx"]=&avg_bx;
+      FirstMoments["by"]=&avg_by;
+      FirstMoments["bz"]=&avg_bz;
+      FirstMoments["ex"]=&avg_ex;
+      FirstMoments["ey"]=&avg_ey;
+      FirstMoments["ez"]=&avg_ez;
       SecondMoments["density"]=&std_density;
+      SecondMoments["vx"]=&std_vx;
+      SecondMoments["vy"]=&std_vy;
+      SecondMoments["vz"]=&std_vz;
+      SecondMoments["bx"]=&std_bx;
+      SecondMoments["by"]=&std_by;
+      SecondMoments["bz"]=&std_bz;
       for ( AvgQuanMapType::iterator it1=FirstMoments.begin(); it1!= FirstMoments.end(); it1++){
           char * label = new  char[MAX_LINE_LENGTH];
           sprintf( label, "%s_avg", it1->first);
@@ -121,6 +139,7 @@ void AverageQuantityWrite( char * name ){
 
 
         delete [] output;
+        it1->second->list.clear(); //EMPTY THE RUNNING LIST.
         status = H5Sclose(dataspace_id);
         status = H5Dclose(dset);
     }
@@ -156,8 +175,6 @@ int ComputeAverageQuantities( LevelHierarchyEntry *LevelArray[],
             db=  FirstMoments[it1->first]->list[nCycle];
             drms = POW(d2 - db*db,0.5);
             it1->second->list[nCycle] = drms;
-
-
         }
     }
 

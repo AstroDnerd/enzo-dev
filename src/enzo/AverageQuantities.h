@@ -45,6 +45,140 @@ class square_density: public average_root{
 };
 EXTERN square_density std_density;
 
+class average_vx: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.Vel1][index]*Ind.Volume;
+    }
+};
+EXTERN average_vx avg_vx;
+
+class average_vy: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.Vel2][index]*Ind.Volume;
+    }
+};
+EXTERN average_vy avg_vy;
+
+class average_vz: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.Vel3][index]*Ind.Volume;
+    }
+};
+EXTERN average_vz avg_vz;
+
+
+class average_px: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.Vel1][index]*BaryonField[Ind.Dens][index]*Ind.Volume;
+    }
+};
+EXTERN average_px avg_px;
+
+class average_py: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.Vel2][index]*BaryonField[Ind.Dens][index]*Ind.Volume;
+    }
+};
+EXTERN average_py avg_py;
+
+class average_pz: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.Vel3][index]*BaryonField[Ind.Dens][index]*Ind.Volume;
+    }
+};
+EXTERN average_pz avg_pz;
+
+class average_ex: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean +=0.5* POW(BaryonField[Ind.Vel1][index],2)*BaryonField[Ind.Dens][index]*Ind.Volume;
+    }
+};
+EXTERN average_ex avg_ex;
+
+class average_ey: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean +=0.5* POW(BaryonField[Ind.Vel2][index],2)*BaryonField[Ind.Dens][index]*Ind.Volume;
+    }
+};
+EXTERN average_ey avg_ey;
+
+class average_ez: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean +=0.5* POW(BaryonField[Ind.Vel3][index],2)*BaryonField[Ind.Dens][index]*Ind.Volume;
+    }
+};
+EXTERN average_ez avg_ez;
+
+
+class square_vx: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.Vel1][index]*BaryonField[Ind.Vel1][index]*Ind.Volume;
+    }
+};
+EXTERN square_vx std_vx;
+
+
+class square_vy: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.Vel2][index]*BaryonField[Ind.Vel2][index]*Ind.Volume;
+    }
+};
+EXTERN square_vy std_vy;
+
+
+class square_vz: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.Vel3][index]*BaryonField[Ind.Vel3][index]*Ind.Volume;
+    }
+};
+EXTERN square_vz std_vz;
+
+class average_bx: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.B1][index]*Ind.Volume;
+    }
+};
+EXTERN average_bx avg_bx;
+
+class average_by: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.B2][index]*Ind.Volume;
+    }
+};
+EXTERN average_by avg_by;
+
+class average_bz: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.B3][index]*Ind.Volume;
+    }
+};
+EXTERN average_bz avg_bz;
+
+class square_bx: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.B1][index]*BaryonField[Ind.B1][index]*Ind.Volume;
+    }
+};
+EXTERN square_bx std_bx;
+
+
+class square_by: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.B2][index]*BaryonField[Ind.B2][index]*Ind.Volume;
+    }
+};
+EXTERN square_by std_by;
+
+
+class square_bz: public average_root{
+    public: virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.B3][index]*BaryonField[Ind.B3][index]*Ind.Volume;
+    }
+};
+EXTERN square_bz std_bz;
+
+
+
 class total_volume: public average_root{
     public: virtual void addup(AVERAGE_ARGS){
         this->current_mean += Ind.Volume;
