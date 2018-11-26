@@ -263,10 +263,6 @@ static int StaticLevelZero = 0;
 
 extern int RK2SecondStepBaryonDeposit;
 
-int ComputeAverageQuantities( LevelHierarchyEntry *LevelArray[],
-                              TopGridData *MetaData,int level, int cycle,
-                              int * LevelCycleCount, int * LevelSubCycleCount);
-
 int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 		int level, float dtLevelAbove, ExternalBoundary *Exterior
 #ifdef TRANSFER
@@ -919,7 +915,6 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
     /* Rebuild the Grids on the next level down.
        Don't bother on the last cycle, as we'll rebuild this grid soon. */
  
-    ComputeAverageQuantities(LevelArray, MetaData, level, cycle, LevelCycleCount, LevelSubCycleCount);
     if (dtThisLevelSoFar[level] < dtLevelAbove)
       RebuildHierarchy(MetaData, LevelArray, level);
 
@@ -935,7 +930,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
  
     EXTRA_OUTPUT_MACRO(6, "After Subcycle Loop")
   if (debug)
-    fprintf(stdout, "EvolveLevel[%"ISYM"]: NumberOfSubCycles = %"ISYM" (%"ISYM" total, %"ISYM" sub)\n", 
+    fprintf(stderr, "EvolveLevel[%"ISYM"]: NumberOfSubCycles = %"ISYM" (%"ISYM" total, %"ISYM" sub)\n", 
             level, cycle, LevelCycleCount[level], LevelSubCycleCount[level]);
  
   /* If possible & desired, report on memory usage. */

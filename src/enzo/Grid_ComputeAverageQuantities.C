@@ -77,7 +77,7 @@ int grid::ComputeAverageQuantities(){
         for( j=GridStartIndex[1];j<=GridEndIndex[1]; j++)
             for( i=GridStartIndex[0];i<=GridEndIndex[0]; i++){
                 index = i+GridDimension[0]*(j+GridDimension[1]*k);
-                for ( AvgQuanMapType::iterator it1=AvgMap.begin(); it1!= AvgMap.end(); it1++){
+                for ( AvgQuanMapType::iterator it1=AverageList.begin(); it1!= AverageList.end(); it1++){
                     it1->second->addup(BaryonField,index,GridDimension,BF);
                 }
             }

@@ -24,11 +24,23 @@ class average_root{
     virtual void addup(AVERAGE_ARGS){
         this->current_mean += 1;
     }
+    virtual void square_to_std(float mean, int nCycle){
+    }
+};
+class std_root: public average_root{
+    virtual void square_to_std(float mean, int nCycle){
+        // variance=< (x-<x>)^2> = <x^2> - <x>^2
+        // std=sqrt(variance):
+        this->list[nCycle] = POW(this->list[nCycle] - mean*mean,0.5);
+
+    }
 };
 typedef std::map<char *,average_root *> AvgQuanMapType;
-EXTERN AvgQuanMapType AvgMap;
+EXTERN AvgQuanMapType FullList;
+EXTERN AvgQuanMapType Scalars;
 EXTERN AvgQuanMapType FirstMoments;
 EXTERN AvgQuanMapType SecondMoments;
+EXTERN AvgQuanMapType AverageList;
 EXTERN average_root avg_root;
 class average_density: public average_root{
     public:
@@ -38,7 +50,7 @@ class average_density: public average_root{
 };
 EXTERN average_density avg_density;
 
-class square_density: public average_root{
+class square_density: public std_root{
     public: virtual void addup(AVERAGE_ARGS){
         this->current_mean += BaryonField[Ind.Dens][index]*BaryonField[Ind.Dens][index]*Ind.Volume;
     }
@@ -110,7 +122,7 @@ class average_ez: public average_root{
 EXTERN average_ez avg_ez;
 
 
-class square_vx: public average_root{
+class square_vx: public std_root{
     public: virtual void addup(AVERAGE_ARGS){
         this->current_mean += BaryonField[Ind.Vel1][index]*BaryonField[Ind.Vel1][index]*Ind.Volume;
     }
@@ -118,7 +130,7 @@ class square_vx: public average_root{
 EXTERN square_vx std_vx;
 
 
-class square_vy: public average_root{
+class square_vy: public std_root{
     public: virtual void addup(AVERAGE_ARGS){
         this->current_mean += BaryonField[Ind.Vel2][index]*BaryonField[Ind.Vel2][index]*Ind.Volume;
     }
@@ -126,7 +138,7 @@ class square_vy: public average_root{
 EXTERN square_vy std_vy;
 
 
-class square_vz: public average_root{
+class square_vz: public std_root{
     public: virtual void addup(AVERAGE_ARGS){
         this->current_mean += BaryonField[Ind.Vel3][index]*BaryonField[Ind.Vel3][index]*Ind.Volume;
     }
@@ -154,7 +166,7 @@ class average_bz: public average_root{
 };
 EXTERN average_bz avg_bz;
 
-class square_bx: public average_root{
+class square_bx: public std_root{
     public: virtual void addup(AVERAGE_ARGS){
         this->current_mean += BaryonField[Ind.B1][index]*BaryonField[Ind.B1][index]*Ind.Volume;
     }
@@ -162,7 +174,7 @@ class square_bx: public average_root{
 EXTERN square_bx std_bx;
 
 
-class square_by: public average_root{
+class square_by: public std_root{
     public: virtual void addup(AVERAGE_ARGS){
         this->current_mean += BaryonField[Ind.B2][index]*BaryonField[Ind.B2][index]*Ind.Volume;
     }
@@ -170,7 +182,7 @@ class square_by: public average_root{
 EXTERN square_by std_by;
 
 
-class square_bz: public average_root{
+class square_bz: public std_root{
     public: virtual void addup(AVERAGE_ARGS){
         this->current_mean += BaryonField[Ind.B3][index]*BaryonField[Ind.B3][index]*Ind.Volume;
     }
@@ -191,10 +203,12 @@ class avg_scalar: public average_root{
     public: virtual void addup(AVERAGE_ARGS){
         //doesn't do anything.
     }
+    public: virtual void compute(){
+            }
 };
 EXTERN avg_scalar avg_time;
 EXTERN avg_scalar avg_cycle;
-
+EXTERN avg_scalar avg_dt;
 
 
 void SetupAverageQuantities();

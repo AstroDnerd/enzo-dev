@@ -141,6 +141,8 @@ int CallPython(LevelHierarchyEntry *LevelArray[], TopGridData *MetaData,
 #define NO_REDUCE_FRAGMENTATION
  
 
+int ComputeAverageQuantities( LevelHierarchyEntry *LevelArray[],
+        TopGridData *MetaData,int level, float dt);
 
  
 int EvolveHierarchy(HierarchyEntry &TopGrid, TopGridData &MetaData,
@@ -574,6 +576,10 @@ int EvolveHierarchy(HierarchyEntry &TopGrid, TopGridData &MetaData,
     /* Check for time-actions. */
  
     CheckForTimeAction(LevelArray, MetaData);
+
+    /* Compute means */
+
+    ComputeAverageQuantities( LevelArray, &MetaData, 0, dt);
  
     /* Check for output. */
  

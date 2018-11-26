@@ -33,11 +33,12 @@
 #include "LevelHierarchy.h"
 #include "CommunicationUtilities.h"
 void SetupAverageQuantities(){
-    if (  AvgMap.empty() ){
-      AvgMap["root"]   =&avg_root;
-      AvgMap["cycle"]  =&avg_cycle;
-      AvgMap["time"]   =&avg_time;
-      AvgMap["volume"] =&tot_vol;
+    if (  FullList.empty() ){
+      Scalars["root"]   =&avg_root;
+      Scalars["cycle"]  =&avg_cycle;
+      Scalars["time"]   =&avg_time;
+      Scalars["volume"] =&tot_vol;
+      Scalars["dt"] =&avg_dt;
       FirstMoments["density"]=&avg_density;
       FirstMoments["vx"]=&avg_vx;
       FirstMoments["vy"]=&avg_vy;
@@ -61,27 +62,37 @@ void SetupAverageQuantities(){
       for ( AvgQuanMapType::iterator it1=FirstMoments.begin(); it1!= FirstMoments.end(); it1++){
           char * label = new  char[MAX_LINE_LENGTH];
           sprintf( label, "%s_avg", it1->first);
-          AvgMap[label] = it1->second;
+          AverageList[label] = it1->second;
       }
       for ( AvgQuanMapType::iterator it1=SecondMoments.begin(); it1!= SecondMoments.end(); it1++){
          char * label = new  char[MAX_LINE_LENGTH];
          sprintf( label, "%s_std", it1->first);
-         AvgMap[label] = it1->second;
+         AverageList[label] = it1->second;
+      }
+      for ( AvgQuanMapType::iterator it1=AverageList.begin(); it1!= AverageList.end(); it1++){
+         char * label = new  char[MAX_LINE_LENGTH];
+         sprintf( label, "%s", it1->first);
+         FullList[label] = it1->second;
+      }
+      for ( AvgQuanMapType::iterator it1=Scalars.begin(); it1!= Scalars.end(); it1++){
+         char * label = new  char[MAX_LINE_LENGTH];
+         sprintf( label, "%s", it1->first);
+         FullList[label] = it1->second;
       }
     }
-    for ( AvgQuanMapType::iterator it1=AvgMap.begin(); it1!= AvgMap.end(); it1++){
+    for ( AvgQuanMapType::iterator it1=FullList.begin(); it1!= FullList.end(); it1++){
         it1->second->current_mean=0;
     }
 }
 void SerializeAverageQuantities( float * AllQuantities){
     int n=0;
-    for ( AvgQuanMapType::iterator it1=AvgMap.begin(); it1!= AvgMap.end(); it1++, n++){
+    for ( AvgQuanMapType::iterator it1=AverageList.begin(); it1!= AverageList.end(); it1++, n++){
         AllQuantities[n] = it1->second->current_mean;
     }
 }
 void DeSerializeAverageQuantities( float * AllQuantities, int cycle){
     int n=0;
-    for ( AvgQuanMapType::iterator it1=AvgMap.begin(); it1!= AvgMap.end(); it1++,n++){
+    for ( AvgQuanMapType::iterator it1=AverageList.begin(); it1!= AverageList.end(); it1++,n++){
         if ( MyProcessorNumber == ROOT_PROCESSOR ){
             it1->second->list[cycle] = AllQuantities[n];
         }
@@ -89,9 +100,9 @@ void DeSerializeAverageQuantities( float * AllQuantities, int cycle){
     }
 }
 float * DeSerializeQ( char * quan){
-    float * out = new float [ AvgMap[quan]->list.size()];
+    float * out = new float [ FullList[quan]->list.size()];
     int n=0;
-    for ( QuanMap::iterator it1=AvgMap[quan]->list.begin(); it1!= AvgMap[quan]->list.end(); it1++,n++){
+    for ( QuanMap::iterator it1=FullList[quan]->list.begin(); it1!= FullList[quan]->list.end(); it1++,n++){
         out[n] = it1->second;
     }
     return out;
@@ -107,7 +118,7 @@ float * DeSerialize( QuanMap * thisone){
 
 }
 void AverageQuantityWrite( char * name ){
-    if ( MyProcessorNumber != ROOT_PROCESSOR || AvgMap.empty() ){
+    if ( MyProcessorNumber != ROOT_PROCESSOR || FullList.empty() ){
         return;
     }
 
@@ -116,6 +127,7 @@ void AverageQuantityWrite( char * name ){
 
     char filename[100];
     sprintf(filename, "%s.AverageQuantities.h5",name);
+    fprintf(stderr,"Write Average %s\n",filename);
 
     //file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     file_id = H5Fcreate(filename, H5F_ACC_EXCL, H5P_DEFAULT, H5P_DEFAULT);
@@ -127,7 +139,7 @@ void AverageQuantityWrite( char * name ){
     int n=0;
     float * output;
     char label[MAX_LINE_LENGTH];
-    for ( AvgQuanMapType::iterator it1=AvgMap.begin(); it1!= AvgMap.end(); it1++,n++){
+    for ( AvgQuanMapType::iterator it1=FullList.begin(); it1!= FullList.end(); it1++,n++){
         //Create Dataspace 
         number[0] = it1->second->list.size();
 
@@ -147,36 +159,37 @@ void AverageQuantityWrite( char * name ){
 }
 int CommunicationBroadcastValues(float *Values, int Number, int BroadcastProcessor);
 int ComputeAverageQuantities( LevelHierarchyEntry *LevelArray[],
-        TopGridData *MetaData,int level, int cycle,
-        int * LevelCycleCount, int * LevelSubCycleCount){
+        TopGridData *MetaData,int level, float dt){
 
     SetupAverageQuantities();
-    if ( MyProcessorNumber == ROOT_PROCESSOR ){
-        AvgMap["time"]->current_mean = MetaData->Time;
-        AvgMap["cycle"]->current_mean = MetaData->CycleNumber;
-    }
     LevelHierarchyEntry *Temp = LevelArray[level];
     while (Temp != NULL) {
         Temp->GridData->ComputeAverageQuantities();
         Temp             = Temp->NextGridThisLevel;
     }
-
-    float * AllQuantities = new float[ AvgMap.size()];
+    
+    float * AllQuantities = new float[ AverageList.size()];
 
     SerializeAverageQuantities( AllQuantities);
-    CommunicationSumValues(AllQuantities, AvgMap.size());
+    CommunicationSumValues(AllQuantities, AverageList.size());
     int nCycle=MetaData->CycleNumber;
     DeSerializeAverageQuantities( AllQuantities, nCycle);
-    //Store standard deviations, not variance
+    if ( MyProcessorNumber == ROOT_PROCESSOR ){
+        Scalars["time"]->list[nCycle] = MetaData->Time;
+        Scalars["cycle"]->list[nCycle] = MetaData->CycleNumber;
+        Scalars["dt"]->list[nCycle] = dt;
+    }
     float d2, db, drms;
     if ( MyProcessorNumber == ROOT_PROCESSOR ){
         for ( AvgQuanMapType::iterator it1=SecondMoments.begin(); it1!= SecondMoments.end(); it1++){
-            d2 = SecondMoments[it1->first]->list[nCycle];
-            db=  FirstMoments[it1->first]->list[nCycle];
-            drms = POW(d2 - db*db,0.5);
-            it1->second->list[nCycle] = drms;
+            //d2 = SecondMoments[it1->first]->list[nCycle];
+            //db=  FirstMoments[it1->first]->list[nCycle];
+            //drms = POW(d2 - db*db,0.5);
+            //it1->second->list[nCycle] = drms;
+            it1->second->square_to_std(FirstMoments[it1->first]->list[nCycle], nCycle);
         }
     }
+    fprintf(stderr,"ComputeAverage monkey cycle %d time %0.6f\n",MetaData->CycleNumber, MetaData->Time);
 
 
     delete AllQuantities;
