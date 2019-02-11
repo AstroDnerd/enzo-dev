@@ -35,7 +35,7 @@ class std_root: public average_root{
 
     }
 };
-typedef std::map<char *,average_root *> AvgQuanMapType;
+typedef std::map<std::string,average_root *> AvgQuanMapType;
 EXTERN AvgQuanMapType FullList;
 EXTERN AvgQuanMapType Scalars;
 EXTERN AvgQuanMapType FirstMoments;

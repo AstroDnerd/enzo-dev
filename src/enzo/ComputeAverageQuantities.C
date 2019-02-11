@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <map>
+#include <string.h>
 #include "ErrorExceptions.h"
 #include "performance.h"
 #include "macros_and_parameters.h"
@@ -34,12 +35,13 @@
 #include "CommunicationUtilities.h"
 void SetupAverageQuantities(){
     if (  FullList.empty() ){
-      Scalars["root"]   =&avg_root;
-      Scalars["cycle"]  =&avg_cycle;
-      Scalars["time"]   =&avg_time;
-      Scalars["volume"] =&tot_vol;
-      Scalars["dt"] =&avg_dt;
+     // Scalars["root"]   =&avg_root;
+     Scalars["cycle"]  =&avg_cycle;
+     Scalars["time"]   =&avg_time;
+     Scalars["volume"] =&tot_vol;
+     Scalars["dt"] =&avg_dt;
       FirstMoments["density"]=&avg_density;
+      //StringMapTest["density"]=&avg_density;
       FirstMoments["vx"]=&avg_vx;
       FirstMoments["vy"]=&avg_vy;
       FirstMoments["vz"]=&avg_vz;
@@ -60,23 +62,19 @@ void SetupAverageQuantities(){
       SecondMoments["by"]=&std_by;
       SecondMoments["bz"]=&std_bz;
       for ( AvgQuanMapType::iterator it1=FirstMoments.begin(); it1!= FirstMoments.end(); it1++){
-          char * label = new  char[MAX_LINE_LENGTH];
-          sprintf( label, "%s_avg", it1->first);
+          std::string label = it1->first + "_avg";
           AverageList[label] = it1->second;
       }
       for ( AvgQuanMapType::iterator it1=SecondMoments.begin(); it1!= SecondMoments.end(); it1++){
-         char * label = new  char[MAX_LINE_LENGTH];
-         sprintf( label, "%s_std", it1->first);
+          std::string label = it1->first + "_std";
          AverageList[label] = it1->second;
       }
       for ( AvgQuanMapType::iterator it1=AverageList.begin(); it1!= AverageList.end(); it1++){
-         char * label = new  char[MAX_LINE_LENGTH];
-         sprintf( label, "%s", it1->first);
+          std::string label = it1->first;
          FullList[label] = it1->second;
       }
       for ( AvgQuanMapType::iterator it1=Scalars.begin(); it1!= Scalars.end(); it1++){
-         char * label = new  char[MAX_LINE_LENGTH];
-         sprintf( label, "%s", it1->first);
+          std::string label = it1->first;
          FullList[label] = it1->second;
       }
     }
@@ -87,8 +85,9 @@ void SetupAverageQuantities(){
 void SerializeAverageQuantities( float * AllQuantities){
     int n=0;
     for ( AvgQuanMapType::iterator it1=AverageList.begin(); it1!= AverageList.end(); it1++, n++){
-        AllQuantities[n] = it1->second->current_mean;
+        AllQuantities[n] = (float) it1->second->current_mean;
     }
+    fprintf(stderr,"CLOWN take25\n");
 }
 void DeSerializeAverageQuantities( float * AllQuantities, int cycle){
     int n=0;
@@ -99,7 +98,7 @@ void DeSerializeAverageQuantities( float * AllQuantities, int cycle){
 
     }
 }
-float * DeSerializeQ( char * quan){
+float * DeSerializeQ( std::string quan){
     float * out = new float [ FullList[quan]->list.size()];
     int n=0;
     for ( QuanMap::iterator it1=FullList[quan]->list.begin(); it1!= FullList[quan]->list.end(); it1++,n++){
@@ -145,8 +144,8 @@ void AverageQuantityWrite( char * name ){
 
         output = DeSerialize( &it1->second->list );
         dataspace_id=H5Screate_simple(1, number, NULL);
-        sprintf(label,"%s",it1->first);
-        dset = H5Dcreate(file_id, label, HDF5_PREC, dataspace_id, H5P_DEFAULT);
+        //sprintf(label,"%s",it1->first);
+        dset = H5Dcreate(file_id, it1->first.c_str(), HDF5_PREC, dataspace_id, H5P_DEFAULT);
         status = H5Dwrite(dset, HDF5_PREC, H5S_ALL, H5S_ALL, H5P_DEFAULT, output);
 
 
@@ -169,7 +168,7 @@ int ComputeAverageQuantities( LevelHierarchyEntry *LevelArray[],
     }
     
     float * AllQuantities = new float[ AverageList.size()];
-
+  
     SerializeAverageQuantities( AllQuantities);
     CommunicationSumValues(AllQuantities, AverageList.size());
     int nCycle=MetaData->CycleNumber;
