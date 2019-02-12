@@ -73,14 +73,14 @@ int grid::ComputeAverageQuantities(){
     BF.Volume = CellWidth[0][0]*CellWidth[1][0]*CellWidth[2][0];
 
     int i,j,k, index, size=GridDimension[0]*GridDimension[1]*GridDimension[2];
+        for ( AvgQuanMapType::iterator it1=AverageList.begin(); it1!= AverageList.end(); it1++){
     for( k=GridStartIndex[2];k<=GridEndIndex[2]; k++)
         for( j=GridStartIndex[1];j<=GridEndIndex[1]; j++)
             for( i=GridStartIndex[0];i<=GridEndIndex[0]; i++){
                 index = i+GridDimension[0]*(j+GridDimension[1]*k);
-                for ( AvgQuanMapType::iterator it1=AverageList.begin(); it1!= AverageList.end(); it1++){
                     it1->second->addup(BaryonField,index,GridDimension,BF);
                 }
-            }
+    }
 
     return SUCCESS;
 }

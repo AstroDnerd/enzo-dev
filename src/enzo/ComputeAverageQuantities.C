@@ -160,7 +160,6 @@ int CommunicationBroadcastValues(float *Values, int Number, int BroadcastProcess
 int ComputeAverageQuantities( LevelHierarchyEntry *LevelArray[],
         TopGridData *MetaData,int level, float dt){
     TIMER_START("AverageQuantities");
-
     SetupAverageQuantities();
     LevelHierarchyEntry *Temp = LevelArray[level];
     while (Temp != NULL) {
@@ -189,7 +188,6 @@ int ComputeAverageQuantities( LevelHierarchyEntry *LevelArray[],
             it1->second->square_to_std(FirstMoments[it1->first]->list[nCycle], nCycle);
         }
     }
-    fprintf(stderr,"ComputeAverage monkey cycle %d time %0.6f\n",MetaData->CycleNumber, MetaData->Time);
 
 
     delete AllQuantities;

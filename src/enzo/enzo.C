@@ -300,12 +300,12 @@ Eint32 MAIN_NAME(Eint32 argc, char *argv[])
 
   // Create enzo timer and initialize default timers
   enzo_timer = new enzo_timing::enzo_timer();
-  TIMER_REGISTER("AverageQuantities");
   TIMER_REGISTER("CommunicationTranspose");
   TIMER_REGISTER("ComputePotentialFieldLevelZero");
   TIMER_REGISTER("RebuildHierarchy");
   TIMER_REGISTER("SetBoundaryConditions");
   TIMER_REGISTER("SolveHydroEquations");
+  TIMER_REGISTER("AverageQuantities");
   TIMER_REGISTER("Total");
 
 #ifdef USE_LCAPERF
