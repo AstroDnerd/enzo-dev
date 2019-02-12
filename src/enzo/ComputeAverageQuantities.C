@@ -19,6 +19,7 @@
 #include <math.h>
 #include <map>
 #include <string.h>
+#include "EnzoTiming.h"
 #include "ErrorExceptions.h"
 #include "performance.h"
 #include "macros_and_parameters.h"
@@ -87,7 +88,6 @@ void SerializeAverageQuantities( float * AllQuantities){
     for ( AvgQuanMapType::iterator it1=AverageList.begin(); it1!= AverageList.end(); it1++, n++){
         AllQuantities[n] = (float) it1->second->current_mean;
     }
-    fprintf(stderr,"CLOWN take25\n");
 }
 void DeSerializeAverageQuantities( float * AllQuantities, int cycle){
     int n=0;
@@ -159,6 +159,7 @@ void AverageQuantityWrite( char * name ){
 int CommunicationBroadcastValues(float *Values, int Number, int BroadcastProcessor);
 int ComputeAverageQuantities( LevelHierarchyEntry *LevelArray[],
         TopGridData *MetaData,int level, float dt){
+    TIMER_START("AverageQuantities");
 
     SetupAverageQuantities();
     LevelHierarchyEntry *Temp = LevelArray[level];
@@ -192,6 +193,7 @@ int ComputeAverageQuantities( LevelHierarchyEntry *LevelArray[],
 
 
     delete AllQuantities;
+    TIMER_STOP("AverageQuantities");
 
 
 }
