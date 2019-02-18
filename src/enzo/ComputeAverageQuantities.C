@@ -160,7 +160,6 @@ int CommunicationBroadcastValues(float *Values, int Number, int BroadcastProcess
 int ComputeAverageQuantities( LevelHierarchyEntry *LevelArray[],
         TopGridData *MetaData,int level, float dt){
     TIMER_START("AverageQuantities");
-
     SetupAverageQuantities();
     LevelHierarchyEntry *Temp = LevelArray[level];
     while (Temp != NULL) {
