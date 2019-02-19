@@ -55,6 +55,9 @@ void SetupAverageQuantities(){
       FirstMoments["ex"]=&avg_ex;
       FirstMoments["ey"]=&avg_ey;
       FirstMoments["ez"]=&avg_ez;
+      FirstMoments["sq_alf_x"]=&sq_alf_x;
+      FirstMoments["sq_alf_y"]=&sq_alf_y;
+      FirstMoments["sq_alf_z"]=&sq_alf_z;
       SecondMoments["density"]=&std_density;
       SecondMoments["vx"]=&std_vx;
       SecondMoments["vy"]=&std_vy;

@@ -190,6 +190,28 @@ class square_bz: public std_root{
 EXTERN square_bz std_bz;
 
 
+class sq_alfven_x: public std_root{
+    public: inline virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.B1][index]*BaryonField[Ind.B1][index]*Ind.Volume/BaryonField[Ind.Dens][index];
+    }
+};
+EXTERN sq_alfven_x sq_alf_x;
+
+class alfven_y: public std_root{
+    public: inline virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.B2][index]*BaryonField[Ind.B2][index]*Ind.Volume/BaryonField[Ind.Dens][index];
+    }
+};
+EXTERN sq_alfven_y sq_alf_y;
+
+class alfven_z: public std_root{
+    public: inline virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.B3][index]*BaryonField[Ind.B3][index]*Ind.Volume/BaryonField[Ind.Dens][index];
+    }
+};
+EXTERN sq_alfven_z sq_alf_z;
+
+
 
 class total_volume: public average_root{
     public: inline virtual void addup(AVERAGE_ARGS){
