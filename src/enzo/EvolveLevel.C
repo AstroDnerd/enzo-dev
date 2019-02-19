@@ -479,12 +479,14 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 
 
     /* Compute stochastic force field via FFT from the spectrum. */
+    TIMER_START("Stochastic");
     if (DrivenFlowProfile) {
         if (ComputeStochasticForcing(MetaData, Grids, NumberOfGrids) == FAIL) {
             fprintf(stderr, "Error in ComputeStochasticForcing.\n");
             return FAIL;
         }
     }
+    TIMER_STOP("Stochastic");
 
     /* ------------------------------------------------------- */
     /* Evolve all grids by timestep dtThisLevel. */
