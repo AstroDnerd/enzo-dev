@@ -38,7 +38,7 @@ void grid::Phases()
 
     if ((PhaseFctInitEven != NULL) && (PhaseFctInitOdd != NULL)) return;
 
-    if (debug) printf("Computing initial phase factors\n");
+    if (debug2) printf("Computing initial phase factors\n");
 
     PhaseFctInitEven = new float[size];
     PhaseFctInitOdd  = new float[size];
@@ -61,7 +61,7 @@ void grid::Phases()
     }
     }
 
-    if (debug) printf("Computing phase factor multiplicators\n");
+    if (debug2) printf("Computing phase factor multiplicators\n");
 
     /* calculate initial phase factors corresponding to the origin of the grid 
        and multiplicators for single cell shifts */
