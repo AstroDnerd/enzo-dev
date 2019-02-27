@@ -31,7 +31,8 @@ class std_root: public average_root{
     virtual void square_to_std(float mean, int nCycle){
         // variance=< (x-<x>)^2> = <x^2> - <x>^2
         // std=sqrt(variance):
-        this->list[nCycle] = POW(this->list[nCycle] - mean*mean,0.5);
+        float square_difference = (float)this->list[nCycle] - mean*mean;
+        this->list[nCycle] = POW(max(square_difference,0.0), 0.5);
 
     }
 };
@@ -189,6 +190,27 @@ class square_bz: public std_root{
 };
 EXTERN square_bz std_bz;
 
+//new here
+class alfven_x: public average_root{
+    public: inline virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.B1][index]*Ind.Volume/POW(BaryonField[Ind.Dens][index],0.5);
+    }
+};
+EXTERN alfven_x alf_x;
+
+class alfven_y: public average_root{
+    public: inline virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.B2][index]*Ind.Volume/POW(BaryonField[Ind.Dens][index],0.5);
+    }
+};
+EXTERN alfven_y alf_y;
+
+class alfven_z: public average_root{
+    public: inline virtual void addup(AVERAGE_ARGS){
+        this->current_mean += BaryonField[Ind.B3][index]*Ind.Volume/POW(BaryonField[Ind.Dens][index],0.5);
+    }
+};
+EXTERN alfven_z alf_z;
 
 class sq_alfven_x: public std_root{
     public: inline virtual void addup(AVERAGE_ARGS){
@@ -197,14 +219,14 @@ class sq_alfven_x: public std_root{
 };
 EXTERN sq_alfven_x sq_alf_x;
 
-class alfven_y: public std_root{
+class sq_alfven_y: public std_root{
     public: inline virtual void addup(AVERAGE_ARGS){
         this->current_mean += BaryonField[Ind.B2][index]*BaryonField[Ind.B2][index]*Ind.Volume/BaryonField[Ind.Dens][index];
     }
 };
 EXTERN sq_alfven_y sq_alf_y;
 
-class alfven_z: public std_root{
+class sq_alfven_z: public std_root{
     public: inline virtual void addup(AVERAGE_ARGS){
         this->current_mean += BaryonField[Ind.B3][index]*BaryonField[Ind.B3][index]*Ind.Volume/BaryonField[Ind.Dens][index];
     }

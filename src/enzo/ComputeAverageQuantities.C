@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <map>
+#include <iostream>
 #include <string.h>
 #include "EnzoTiming.h"
 #include "ErrorExceptions.h"
@@ -55,9 +56,9 @@ void SetupAverageQuantities(){
       FirstMoments["ex"]=&avg_ex;
       FirstMoments["ey"]=&avg_ey;
       FirstMoments["ez"]=&avg_ez;
-      FirstMoments["sq_alf_x"]=&sq_alf_x;
-      FirstMoments["sq_alf_y"]=&sq_alf_y;
-      FirstMoments["sq_alf_z"]=&sq_alf_z;
+      FirstMoments["alf_x"]=&alf_x;
+      FirstMoments["alf_y"]=&alf_y;
+      FirstMoments["alf_z"]=&alf_z;
       SecondMoments["density"]=&std_density;
       SecondMoments["vx"]=&std_vx;
       SecondMoments["vy"]=&std_vy;
@@ -65,6 +66,9 @@ void SetupAverageQuantities(){
       SecondMoments["bx"]=&std_bx;
       SecondMoments["by"]=&std_by;
       SecondMoments["bz"]=&std_bz;
+      SecondMoments["alf_x"]=&sq_alf_x;
+      SecondMoments["alf_y"]=&sq_alf_y;
+      SecondMoments["alf_z"]=&sq_alf_z;
       for ( AvgQuanMapType::iterator it1=FirstMoments.begin(); it1!= FirstMoments.end(); it1++){
           std::string label = it1->first + "_avg";
           AverageList[label] = it1->second;
