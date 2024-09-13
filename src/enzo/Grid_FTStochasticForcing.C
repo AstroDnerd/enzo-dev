@@ -79,7 +79,7 @@ int grid::FTStochasticForcing(int FieldDim)
         numberOfPhases += size*GridDimension[dim];
     }
 
-        if (debug)
+        if (debug2)
             printf("Grid patch: #zones = %"ISYM", #phases = %"ISYM"\n",
                 numberOfGridZones,numberOfPhases);
 

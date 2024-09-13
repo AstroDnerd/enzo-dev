@@ -516,6 +516,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
                     Grids[grid1]->GridData->SolveForPotential(level);
                 Grids[grid1]->GridData->ComputeAccelerations(level);
                 Grids[grid1]->GridData->CopyPotentialToBaryonField();
+                //Grids[grid1]->GridData->ExtraFunction("Born");
             }
             /* otherwise, interpolate potential from coarser grid, which is
                now done in PrepareDensity. */
@@ -585,6 +586,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
             }//hydro method
         }//usehydro
     }//grids
+
 
     if( HydroMethod == HD_RK || HydroMethod == MHD_RK ){
 #ifdef FAST_SIB
@@ -665,6 +667,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
  
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
       Grids[grid1]->GridData->MultiSpeciesHandler();
+            Grids[grid1]->GridData->ExtraFunction("multi");
 
       /* Update particle positions (if present). */
  
@@ -739,6 +742,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 	Grids[grid1]->GridData->DeleteAccelerationField();
 #endif //!SAB
 
+            Grids[grid1]->GridData->ExtraFunction("deleted");
       Grids[grid1]->GridData->DeleteParticleAcceleration();
 
       if (UseFloor) 
@@ -915,6 +919,10 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
     /* Check for mass flux across outer boundaries of domain */
     ComputeDomainBoundaryMassFlux(Grids, level, NumberOfGrids, MetaData);
 
+      for(grid1=0;grid1<NumberOfGrids; grid1++){
+
+            Grids[grid1]->GridData->ExtraFunction("after UFG");
+      }
 
     /* Recompute radiation field, if requested. */
     RadiationFieldUpdate(LevelArray, level, MetaData);

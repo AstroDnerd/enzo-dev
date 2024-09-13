@@ -124,15 +124,6 @@ int DrivenFlowInitialize(FILE *fptr, FILE *Outfptr,
     return FALSE;
   }
 
-  if (SelfGravity) {
-      fprintf(stderr,"DrivenFlowInitialize: SelfGravity untested at this point.\n");
-      return FALSE;
-  }
-
-  if ((HydroMethod != MHD_RK) && (HydroMethod != HD_RK) && (HydroMethod != MHD_Li)) {
-      fprintf(stderr,"DrivenFlowInitialize: Only support for MUSCL framework and MHDCT at this point.\n");
-      return FALSE;
-  }
 
   if (MetaData.TopGridRank != 3) {
       fprintf(stderr,"DrivenFlowInitialize: Only 3D tested at this point.\n");
@@ -168,6 +159,7 @@ int DrivenFlowInitialize(FILE *fptr, FILE *Outfptr,
   
   if (SetBaryonFields) {
   /* create a stochasitc forcing object with the specified parameters */
+      if ( UseDrivingField)
   Forcing.Init(MetaData.TopGridRank,
            DrivenFlowProfile,
            DrivenFlowAlpha,
@@ -203,9 +195,11 @@ int DrivenFlowInitialize(FILE *fptr, FILE *Outfptr,
   }
   MHDCTSetupFieldLabels();
 
+  if ( UseDrivingField ) {
     DataLabel[count++] = StochAccel1Name;
     DataLabel[count++] = StochAccel2Name;
     DataLabel[count++] = StochAccel3Name;
+  }
 
   /* Write parameters to parameter output file */
 

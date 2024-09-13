@@ -17,5 +17,11 @@
 
 int grid::ExtraFunction(char * message){
 
+    if ( ProcessorNumber == MyProcessorNumber )
+        return SUCCESS;
+
+//fprintf(stderr,"CLOWN %s %p\n",message,AccelerationField);
+    fprintf(stderr,"CLOWN %s \n",message);
+
     return SUCCESS;
 }

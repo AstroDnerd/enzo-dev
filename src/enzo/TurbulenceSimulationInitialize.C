@@ -42,13 +42,16 @@
 #include "fortran.def"
 #include "error.h"
 #include "message.h"
+#include "CommunicationUtilities.h"
  
 /* function prototypes */
  
 void WriteListOfFloats(FILE *fptr, int N, float floats[]);
 void WriteListOfFloats(FILE *fptr, int N, FLOAT floats[]);
 void WriteListOfInts(FILE *fptr, int N, int nums[]);
+void PrintMemoryUsage(char *str);
 int CommunicationAllSumIntegerValues(int *Values, int Number);
+void RecursivelySetParticleCount(HierarchyEntry *GridPoint, PINT *Count);
  
 /* Turbulence Parameters (that need to be shared) */
  
@@ -87,7 +90,10 @@ int TurbulenceSimulationInitialize(FILE *fptr, FILE *Outfptr,
   char *Drive1Name = "DrivingField1";
   char *Drive2Name = "DrivingField2";
   char *Drive3Name = "DrivingField3";
-  char *GravPotName = "GravPotential";
+  char *GravPotName = "PotentialField";
+  char *Acceleration0Name = "Acceleration_x";
+  char *Acceleration1Name = "Acceleration_y";
+  char *Acceleration2Name = "Acceleration_z";
  
   /* declarations */
  
@@ -367,6 +373,11 @@ int TurbulenceSimulationInitialize(FILE *fptr, FILE *Outfptr,
   }
   if(WritePotential)
       DataLabel[i++] = GravPotName;
+  if(WriteAcceleration){
+      DataLabel[i++] = Acceleration0Name;
+      DataLabel[i++] = Acceleration1Name;
+      DataLabel[i++] = Acceleration2Name;
+  }
 
   for (j = 0; j < i; j++)
     DataUnits[j] = NULL;
@@ -510,6 +521,7 @@ int TurbulenceSimulationReInitialize(HierarchyEntry *TopGrid,
   /* Call grid initializer.  Use TotalRefinement = -1 to flag real read. */
  
   int TotalRefinement = -1;
+  
  
   /* Loop over level zero grid. */
  
@@ -533,6 +545,57 @@ int TurbulenceSimulationReInitialize(HierarchyEntry *TopGrid,
  
     Temp = Temp->NextGridThisLevel;
   }
+
+    PINT DummyNumberOfParticles = 0;
+ 
+    Temp = TopGrid;
+ 
+    while (Temp != NULL) {
+      if (Temp->GridData->TracerParticleCreateParticles(
+		TracerParticleCreationLeftEdge,
+		TracerParticleCreationRightEdge,
+		TracerParticleCreationSpacing,
+		DummyNumberOfParticles) == FAIL) {
+	ENZO_FAIL("Error in grid->TracerParticleCreateParticles\n");
+      }
+      
+      Temp = Temp->NextGridThisLevel;
+    }
+ 
+  // Get the global particle count
+ 
+  int LocalNumberOfParticles;
+ 
+  Temp = TopGrid;
+  while (Temp != NULL) {
+ 
+    LocalNumberOfParticles = 0;
+    LocalNumberOfParticles = Temp->GridData->ReturnNumberOfParticles();
+    // printf("OldLocalParticleCount: %"ISYM"\n", LocalNumberOfParticles );
+
+#ifdef USE_MPI 
+    CommunicationAllReduceValues(&LocalNumberOfParticles, 1, MPI_SUM);
+#endif /* USE_MPI */
+    Temp->GridData->SetNumberOfParticles(LocalNumberOfParticles);
+ 
+    LocalNumberOfParticles = Temp->GridData->ReturnNumberOfParticles();
+    // printf("NewLocalParticleCount: %"ISYM"\n", LocalNumberOfParticles );
+ 
+    Temp = Temp->NextGridThisLevel;
+  }
+ 
+  PrintMemoryUsage("Local pc set");
+ 
+ 
+  // Loop over grids and set particle ID number
+ 
+  Temp = TopGrid;
+  PINT ParticleCount = 0;
+  RecursivelySetParticleCount(Temp, &ParticleCount);
+    printf("CLOWN FinalParticleCount = %"ISYM"\n", ParticleCount);
+
+  MetaData.NumberOfParticles = ParticleCount;
+
  
   return SUCCESS;
 }

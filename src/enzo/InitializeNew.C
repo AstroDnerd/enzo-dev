@@ -557,8 +557,10 @@ int InitializeNew(char *filename, HierarchyEntry &TopGrid,
 #endif /* TRANSFER */
 
   // Turbulence in a box with StochasticForcing
+  int SetBaryons = FALSE;
+  if ( ParallelRootGridIO ) SetBaryons=TRUE;
   if (ProblemType == 59)
-    ret = DrivenFlowInitialize(fptr, Outfptr, TopGrid, MetaData,0);
+    ret = DrivenFlowInitialize(fptr, Outfptr, TopGrid, MetaData,SetBaryons);
 
   // 60) Turbulence Simulation.
   
@@ -1009,7 +1011,7 @@ int InitializeNew(char *filename, HierarchyEntry &TopGrid,
 
   PrintMemoryUsage("After 2nd pass");
 
-  if (ProblemType == 59)
+  if (ProblemType == 59 && ParallelRootGridIO)
     if (DrivenFlowInitialize(fptr, Outfptr, TopGrid, MetaData, 1) == FAIL)
       ENZO_FAIL("Error in DrivenFlowInitialize with SetBaryons");
   

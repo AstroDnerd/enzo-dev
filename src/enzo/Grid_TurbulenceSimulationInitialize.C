@@ -170,6 +170,12 @@ int grid::TurbulenceSimulationInitializeGrid(
 
   if( WritePotential )
       FieldType[NumberOfBaryonFields++] = GravPotential; 
+
+  if( WriteAcceleration ){
+      FieldType[NumberOfBaryonFields++] = Acceleration0; 
+      FieldType[NumberOfBaryonFields++] = Acceleration1; 
+      FieldType[NumberOfBaryonFields++] = Acceleration2; 
+  }
  
   /* Set the subgrid static flag. */
  
