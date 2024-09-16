@@ -445,23 +445,6 @@ int grid::Group_WriteGrid(FILE *fptr, char *base_name, int grid_id, HDF5_hid_t f
         }
     } // end if for write external acceleration field
 
-        if(PotentialField != NULL) 
-    if (WriteAcceleration==1){
-        fprintf(stderr,"CLOWN write accel");
-				this->ComputeAccelerations(GridLevel);
-        fprintf(stderr,"CLOWN comp accel");
-        this->write_dataset(GridRank, OutDims, "Acceleration_x",
-            group_id, file_type_id, (VOIDP) AccelerationField[0], TRUE, temp);
-        fprintf(stderr,"CLOWN write x");
-        if (GridRank==3){
-          this->write_dataset(GridRank, OutDims, "Acceleration_y",
-              group_id, file_type_id, (VOIDP) AccelerationField[1], TRUE, temp);
-        fprintf(stderr,"CLOWN write y");
-          this->write_dataset(GridRank, OutDims, "Acceleration_z",
-              group_id, file_type_id, (VOIDP) AccelerationField[2], TRUE, temp);
-        fprintf(stderr,"CLOWN write z");
-        }
-    } // end if for write external acceleration field
    
 
     /* If requested, compute and output the temperature field 

@@ -516,7 +516,6 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
                     Grids[grid1]->GridData->SolveForPotential(level);
                 Grids[grid1]->GridData->ComputeAccelerations(level);
                 Grids[grid1]->GridData->CopyPotentialToBaryonField();
-                //Grids[grid1]->GridData->ExtraFunction("Born");
             }
             /* otherwise, interpolate potential from coarser grid, which is
                now done in PrepareDensity. */
@@ -526,6 +525,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
         /* Gravity: compute field due to preset sources. */
 
         Grids[grid1]->GridData->ComputeAccelerationFieldExternal();
+
 
         /* Radiation Pressure: add to acceleration field */
 #ifdef TRANSFER
@@ -553,6 +553,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
            in preparation for the new step. */
 
         Grids[grid1]->GridData->CopyBaryonFieldToOldBaryonField();
+        Grids[grid1]->GridData->CopyAccelerationToBaryonField(); //for outputing.
 
 	/* Call Schrodinger solver. */
 
@@ -667,7 +668,6 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
  
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
       Grids[grid1]->GridData->MultiSpeciesHandler();
-            Grids[grid1]->GridData->ExtraFunction("multi");
 
       /* Update particle positions (if present). */
  
@@ -742,7 +742,6 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 	Grids[grid1]->GridData->DeleteAccelerationField();
 #endif //!SAB
 
-            Grids[grid1]->GridData->ExtraFunction("deleted");
       Grids[grid1]->GridData->DeleteParticleAcceleration();
 
       if (UseFloor) 
@@ -921,7 +920,6 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 
       for(grid1=0;grid1<NumberOfGrids; grid1++){
 
-            Grids[grid1]->GridData->ExtraFunction("after UFG");
       }
 
     /* Recompute radiation field, if requested. */

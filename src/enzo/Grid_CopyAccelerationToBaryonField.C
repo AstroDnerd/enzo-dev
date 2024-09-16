@@ -67,7 +67,11 @@ int grid::CopyAccelerationToBaryonField()
 
   int size = GridDimension[0]*GridDimension[1]*GridDimension[2];
 
-  for ( int dim=0;dim=GridRank;dim++)
-      for(int index=0;index=size;index++){
-          BaryonField[indexx+dim][index] = AccelerationField[dim][index];
+  for ( int dim=0;dim<GridRank;dim++)
+      for(int index=0;index<size;index++){
+          BaryonField[fieldx+dim][index] = AccelerationField[dim][index];
       }
+  return SUCCESS;
+}
+
+

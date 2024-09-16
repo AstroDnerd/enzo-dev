@@ -153,6 +153,7 @@ int EvolveHierarchy(HierarchyEntry &TopGrid, TopGridData &MetaData,
 #endif
 		    LevelHierarchyEntry *LevelArray[], float Initialdt)
 {
+    ParallelRootGridIO = TRUE;
  
   float dt;
  

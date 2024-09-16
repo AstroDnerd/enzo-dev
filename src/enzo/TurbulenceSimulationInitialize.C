@@ -592,7 +592,6 @@ int TurbulenceSimulationReInitialize(HierarchyEntry *TopGrid,
   Temp = TopGrid;
   PINT ParticleCount = 0;
   RecursivelySetParticleCount(Temp, &ParticleCount);
-    printf("CLOWN FinalParticleCount = %"ISYM"\n", ParticleCount);
 
   MetaData.NumberOfParticles = ParticleCount;
 
