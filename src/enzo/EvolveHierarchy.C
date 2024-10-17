@@ -251,13 +251,6 @@ int EvolveHierarchy(HierarchyEntry &TopGrid, TopGridData &MetaData,
     Exterior->DetachForcingFromBaryonFields();
   }
  
-  /* Check for output. */
- 
-  CheckForOutput(&TopGrid, MetaData, Exterior, 
-#ifdef TRANSFER
-		 ImplicitSolver,
-#endif		 
-		 Restart);
 
   PrintMemoryUsage("Output");
  
@@ -290,6 +283,14 @@ int EvolveHierarchy(HierarchyEntry &TopGrid, TopGridData &MetaData,
     }
 
   } // ENDELSE particle splitting
+
+  /* Check for output. */
+ 
+  CheckForOutput(&TopGrid, MetaData, Exterior, 
+#ifdef TRANSFER
+		 ImplicitSolver,
+#endif		 
+		 Restart);
 
   PrintMemoryUsage("1st rebuild");
  
