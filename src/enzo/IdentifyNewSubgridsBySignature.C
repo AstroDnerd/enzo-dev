@@ -71,9 +71,13 @@ int IdentifyNewSubgridsBySignature(ProtoSubgrid *SubgridList[],
 
 	Subgrid->ComputeSignature(dim);
 
-	if (Subgrid->FindGridsByZeroSignature(dim, NumberOfNewGrids, GridEnds) == FAIL) {
-	 ENZO_FAIL("Error in ProtoSubgrid->FindGridsByZeroSignature.");
-	}
+    if ( ForceSubgridEdge ){
+        Subgrid->ForceSubgridEdge(dim,NumberOfNewGrids,GridEnds);
+    }else{
+        if (Subgrid->FindGridsByZeroSignature(dim, NumberOfNewGrids, GridEnds) == FAIL) {
+         ENZO_FAIL("Error in ProtoSubgrid->FindGridsByZeroSignature.");
+        }
+    }
  
 	/* Error check. */
  

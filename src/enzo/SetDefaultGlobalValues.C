@@ -991,6 +991,9 @@ int SetDefaultGlobalValues(TopGridData &MetaData)
   UseMHD=0;
   MaxVelocityIndex = 3;
 
+  ForceSubgridEdge = TRUE;
+  ForceSubgridEdgeSize = 16;
+
   //MHDCT variables
   MHDCTSlopeLimiter = 1;
   MHDCTDualEnergyMethod = INT_UNDEFINED;
