@@ -53,6 +53,11 @@ int ProtoSubgrid::AcceptableSubgrid()
     if( GridDimension[dim] >= 0.5*MAX_ANY_SINGLE_DIRECTION)
         return FALSE;
   }
+  for ( int dim=0;dim<GridRank;dim++){
+      if ( ForceSubgridEdgeFlag )
+          if( GridDimension[dim] > ForceSubgridEdgeSize )
+              return FALSE;
+  }
  
   float efficiency = float(NumberFlagged)/float(size);
 
