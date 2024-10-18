@@ -1164,7 +1164,7 @@ EXTERN float StellarWindSpeed;
 EXTERN float StellarWindTemperature;
 EXTERN FLOAT StellarWindCenterPosition[3];
 
-EXTERN int ForceSubgridEdge;
+EXTERN int ForceSubgridEdgeFlag;
 EXTERN int ForceSubgridEdgeSize;
 
 EXTERN int MHDCTSlopeLimiter;

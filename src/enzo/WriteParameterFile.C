@@ -1287,6 +1287,9 @@ int WriteParameterFile(FILE *fptr, TopGridData &MetaData, char *name = NULL)
   fprintf(fptr,"MHD_ProjectE                  =%"ISYM"\n",MHD_ProjectE);
   fprintf(fptr,"EquationOfState               =%"ISYM"\n",EquationOfState);
 
+  fprintf(fptr, "ForceSubgridEdge             =%"ISYM"\n",ForceSubgridEdgeFlag);
+  fprintf(fptr, "ForceSubgridEdgeSize         =%"ISYM"\n",ForceSubgridEdgeSize);
+
   fprintf(fptr, "CorrectParentBoundaryFlux          = %d\n", CorrectParentBoundaryFlux);
 
   fprintf(fptr, "StoreDomainBoundaryMassFlux = %"ISYM"\n", StoreDomainBoundaryMassFlux);

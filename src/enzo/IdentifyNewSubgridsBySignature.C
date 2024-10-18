@@ -71,7 +71,7 @@ int IdentifyNewSubgridsBySignature(ProtoSubgrid *SubgridList[],
 
 	Subgrid->ComputeSignature(dim);
 
-    if ( ForceSubgridEdge ){
+                if ( ForceSubgridEdgeFlag ){
         Subgrid->ForceSubgridEdge(dim,NumberOfNewGrids,GridEnds);
     }else{
         if (Subgrid->FindGridsByZeroSignature(dim, NumberOfNewGrids, GridEnds) == FAIL) {
