@@ -43,6 +43,8 @@ class ProtoSubgrid
   int ComputeSignature(int dim);
   int FindGridsByZeroSignature(int dim, int &NumberOfNewGrids, 
 			       int GridEnds[MAX_NUMBER_OF_SUBGRIDS][2]);
+  int ForceSubgridEdge(int dim, int &NumberOfNewGrids, 
+			       int GridEnds[MAX_NUMBER_OF_SUBGRIDS][2]);
   int CopyToNewSubgrid(int dim, int GridStart, int GridEnd, 
 		       ProtoSubgrid *NewGrid);
   int ComputeSecondDerivative(int dim, int &ZeroCrossStrength, 
