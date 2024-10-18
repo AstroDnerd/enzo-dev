@@ -1226,7 +1226,7 @@ int ReadParameterFile(FILE *fptr, TopGridData &MetaData, float *Initialdt)
     ret += sscanf(line, "BAnyl = %"ISYM, &BAnyl);
     ret += sscanf(line, "WriteExternalAccel = %"ISYM, &WriteExternalAccel);
     ret += sscanf(line, "ForceSubgridEdge = %"ISYM, &ForceSubgridEdgeFlag);
-    ret += sscanf(line, "ForceSubgridSize = %"ISYM, &ForceSubgridEdgeSize);
+    ret += sscanf(line, "ForceSubgridEdgeSize = %"ISYM, &ForceSubgridEdgeSize);
 
 
     /* Read MHD Paramters */

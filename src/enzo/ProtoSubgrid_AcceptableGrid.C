@@ -35,50 +35,51 @@
  
 int ProtoSubgrid::AcceptableSubgrid()
 {
- 
-  /* If NumberFlagged hasn't been computed yet, then compute it. */
- 
-  if (NumberFlagged == INT_UNDEFINED) {
-    this->ComputeSignature(0);
-    NumberFlagged = 0;
-    for (int i = 0; i < GridDimension[0]; i++)
-      NumberFlagged += Signature[0][i];
-  }
 
-  /* Compute size and efficiency. */
- 
-  int size = 1;
-  for (int dim = 0; dim < GridRank; dim++){
-    size *= GridDimension[dim];
-    if( GridDimension[dim] >= 0.5*MAX_ANY_SINGLE_DIRECTION)
+    /* If NumberFlagged hasn't been computed yet, then compute it. */
+
+    if (NumberFlagged == INT_UNDEFINED) {
+        this->ComputeSignature(0);
+        NumberFlagged = 0;
+        for (int i = 0; i < GridDimension[0]; i++)
+            NumberFlagged += Signature[0][i];
+    }
+
+    /* Compute size and efficiency. */
+
+    int size = 1;
+    for (int dim = 0; dim < GridRank; dim++){
+        size *= GridDimension[dim];
+        if( GridDimension[dim] >= 0.5*MAX_ANY_SINGLE_DIRECTION)
+            return FALSE;
+    }
+    if ( ForceSubgridEdgeFlag )
+        for ( int dim=0;dim<GridRank;dim++){
+            if( GridDimension[dim] > ForceSubgridEdgeSize ){
+                return FALSE;
+            }
+        }
+
+    float efficiency = float(NumberFlagged)/float(size);
+
+    /* For size restrictions, use the number of child cells */
+
+    //size *= 8;
+
+    /* Subgrid is acceptable if it is efficient enough or small enough,
+       but if we are using multiple processors, then make sure it is
+       not too big (for good load balancing). */
+
+    if (size <= POW(float(MinimumSubgridEdge), GridRank))
+        return TRUE;
+
+    if (size > MaximumSubgridSize && NumberOfProcessors > 1)
         return FALSE;
-  }
-  for ( int dim=0;dim<GridRank;dim++){
-      if ( ForceSubgridEdgeFlag )
-          if( GridDimension[dim] > ForceSubgridEdgeSize )
-              return FALSE;
-  }
- 
-  float efficiency = float(NumberFlagged)/float(size);
 
-  /* For size restrictions, use the number of child cells */
- 
-  //size *= 8;
+    if (efficiency > MinimumEfficiency)
+        return TRUE;
 
-  /* Subgrid is acceptable if it is efficient enough or small enough,
-     but if we are using multiple processors, then make sure it is
-     not too big (for good load balancing). */
- 
-  if (size <= POW(float(MinimumSubgridEdge), GridRank))
-    return TRUE;
- 
-  if (size > MaximumSubgridSize && NumberOfProcessors > 1)
+    /* Not acceptable yet -- keep refining. */
+
     return FALSE;
- 
-  if (efficiency > MinimumEfficiency)
-    return TRUE;
-
-  /* Not acceptable yet -- keep refining. */
- 
-  return FALSE;
 }
