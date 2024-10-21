@@ -25,7 +25,6 @@ int ProtoSubgrid::ForceSubgridEdge(int dim, int &NumberOfNewGrids,
         int GridEnds[MAX_NUMBER_OF_SUBGRIDS][2])
 {
     /* Error check */
-    fprintf(stderr,"CLOWN forcer\n");
 
     if (dim >= GridRank) {
         ENZO_VFAIL("Passed dim(%"ISYM") > GridRank(%"ISYM")\n", dim, GridRank)
