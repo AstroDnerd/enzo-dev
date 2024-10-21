@@ -292,6 +292,7 @@ int EvolveHierarchy(HierarchyEntry &TopGrid, TopGridData &MetaData,
 #endif		 
 		 Restart);
 
+
   PrintMemoryUsage("1st rebuild");
  
   /* Reset magnetic fields if requested. */

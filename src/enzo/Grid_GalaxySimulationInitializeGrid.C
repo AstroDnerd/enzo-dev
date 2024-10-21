@@ -1,4 +1,6 @@
+
 /***********************************************************************
+[6~/
 /  GRID CLASS (INITIALIZE THE GRID FOR A GALAXY SIMULATION)
 /
 /  written by: Greg Bryan
@@ -20,7 +22,6 @@
 #include "EnzoTiming.h"
 #include "ErrorExceptions.h"
 #include "macros_and_parameters.h"
-#include "phys_constants.h"
 #include "typedefs.h"
 #include "global_data.h"
 #include "Fluxes.h"
@@ -29,12 +30,19 @@
 #include "Grid.h"
 #include "CosmologyParameters.h"
 
+#define Mpc (3.0856e24)         //Mpc [cm] 
+#define SolarMass (1.989e33)    //Solar Mass [g]
+#define GravConst (6.67e-8)     //Gravitational Constant [cm3g-1s-2]
+#define pi (3.14159)
+#define mh (1.67e-24)           //Mass of Hydrogen [g]
+#define kboltz (1.381e-16)      //Boltzmann's Constant [ergK-1]
 #define kboltzKeV (8.617e-8)    // keV per K
 #define mu (0.6)
 #define CM_PER_KM (1.0e5)
 #define CM_PER_KPC (3.0856e21)
 #define KEV_PER_ERG (6.242e8)
 
+extern int Enzo_Version;
 int GetUnits(float *DensityUnits, float *LengthUnits,
              float *TemperatureUnits, float *TimeUnits,
              float *VelocityUnits, FLOAT Time);
@@ -51,12 +59,12 @@ void setup_chem(float density, float temperature, int equilibrate,
 		float& HeIdest, float& HeIIdest, float& HeIIIdest,
 		float& HMdest, float& H2Idest, float& H2IIdest,
 		float& DIdest, float& DIIdest, float& HDIdest);
-double gasvel(FLOAT radius, double DiskDensity, FLOAT ExpansionFactor, 
-             double GalaxyMass, double ScaleHeightR, double ScaleHeightz, 
-             double DMConcentration, FLOAT Time);
-double gauss_mass(FLOAT r, FLOAT z, FLOAT xpos, FLOAT ypos, FLOAT zpos, 
-                 FLOAT inv [3][3], double DiskDensity,
-                 double ScaleHeightR, double ScaleHeightz,
+float gasvel(FLOAT radius, float DiskDensity, FLOAT ExpansionFactor, 
+             float GalaxyMass, FLOAT ScaleHeightR, FLOAT ScaleHeightz, 
+             float DMConcentration, FLOAT Time);
+float gauss_mass(FLOAT r, FLOAT z, FLOAT xpos, FLOAT ypos, FLOAT zpos, 
+                 FLOAT inv [3][3], float DiskDensity,
+                 FLOAT ScaleHeightR, FLOAT ScaleHeightz,
                  FLOAT cellwidth);
 void rot_to_disk(FLOAT xpos, FLOAT ypos, FLOAT zpos, FLOAT &xrot,
                  FLOAT &yrot, FLOAT &zrot, FLOAT inv [3][3]);
@@ -65,7 +73,8 @@ double bilinear_interp(double x, double y,
                        double f_x1y1, double f_x1y2, 
                        double f_x2y1, double f_x2y2);
 
-double DarkMatterMassEnclosed(FLOAT R);
+
+float NFWDarkMatterMassEnclosed(FLOAT R);
 
 /* struct to carry around data required for circumgalactic media
    if we need to generate radial profiles of halo quantities via 
@@ -94,21 +103,13 @@ struct CGMdata {
 };
 
 /* Internal Routines for CGM setup */
-double HaloGasDensity(FLOAT R, struct CGMdata&);
-double HaloGasTemperature(FLOAT R, struct CGMdata&);
+float HaloGasDensity(FLOAT R, struct CGMdata&);
+float HaloGasTemperature(FLOAT R, struct CGMdata&);
 
 /* Internal Routines for DiskGravity Setup */
-double DiskGravityCircularVelocity(FLOAT rsph, FLOAT rcyl, FLOAT z);
-double DiskGravityStellarAccel(FLOAT rcyl, FLOAT z);
-double DiskGravityBulgeAccel(FLOAT rsph);
-
-/* Stuff for the Tonnesen & Bryan 09 ressurection */
-void DiskForceBalance(FLOAT cellwidth, FLOAT z, double density, struct CGMdata& CGM_data,
-                          double &temperature, double &rotvel);
-double trapzd(double (func)(), double a, double b, int n);
-double qromb(double (*func)(double), double a, double b);
-void polint(double xa[],double ya[],int n,double x,double *y,double *dy);
-static FLOAT r2;
+double DiskGravityCircularVelocity(double rsph, double rcyl, double z);
+double DiskGravityStellarAccel(double rcyl, double z);
+double DiskGravityBulgeAccel(double rsph);
 
 static float DensityUnits, LengthUnits, TemperatureUnits = 1,
              TimeUnits, VelocityUnits, MassUnits;
@@ -132,58 +133,59 @@ double GalaxySimulationGasHaloScaleRadius,
 /* declarations for a bunch of functions needed to generate radial profiles
    of halo quantities via numerical integration - see the actual functions for
    descriptions. */
-double sigmoid(FLOAT r, FLOAT r0, double k, double y0, double y_off);
-double halo_S_of_r(FLOAT r);
-double halo_S_of_r(FLOAT r, grid* Grid);
-double halo_dSdr(FLOAT r, double n);
-double halo_dn_dr(FLOAT r, double n);
-double halo_dP_dr(FLOAT r, double P, grid* Grid);
-double sigmoid_halo_dP_dr(FLOAT r, double P, double log_r0,
+double sigmoid(double r, double r0, double k, double y0, double y_off);
+double halo_S_of_r(double r);
+double halo_S_of_r(double r, grid* Grid);
+double halo_dSdr(double r, double n);
+double halo_dn_dr(double r, double n);
+double halo_dP_dr(double r, double P, grid* Grid);
+double sigmoid_halo_dP_dr(double r, double P, double log_r0,
 			  double k, double y0, double y_off);
-double halo_g_of_r(FLOAT r);
-double halo_mod_g_of_r(FLOAT r);
-double halo_mod_DMmass_at_r(FLOAT r);
-void halo_init(struct CGMdata& CGM_data, grid* Grid, FLOAT Rstop=-1, int GasHalo_override=0);
+double halo_g_of_r(double r);
+double halo_mod_g_of_r(double r);
+double halo_mod_DMmass_at_r(double r);
+void halo_init(struct CGMdata& CGM_data, grid* Grid, float Rstop=-1, int GasHalo_override=0);
 
-static FLOAT rcyl;
 
-int grid::GalaxySimulationInitializeGrid(double DiskRadius,
-           double GalaxyMass,
-           double GasMass,
+int grid::GalaxySimulationInitializeGrid(FLOAT DiskRadius,
+           FLOAT GalaxyMass,
+           FLOAT GasMass,
            FLOAT DiskPosition[MAX_DIMENSION], 
-           double ScaleHeightz,
-           double ScaleHeightR,
-           double GalaxyTruncationRadius,
-           double DiskDensityCap, 
-           double DMConcentration,
-           double DiskTemperature,
-           int    DiskPressureBalance,
-           double InitialTemperature,
-           double UniformDensity,
+           FLOAT ScaleHeightz,
+           FLOAT ScaleHeightR,
+           FLOAT GalaxyTruncationRadius,
+           FLOAT DiskDensityCap, 
+           FLOAT DMConcentration,
+           FLOAT DiskTemperature,
+           FLOAT InitialTemperature,
+           FLOAT UniformDensity,
            int   EquilChem,
 	   int   GasHalo,
-           double GasHaloScaleRadius,
-           double GasHaloDensity,
-           double GasHaloDensity2,
-           double GasHaloTemperature,
-           double GasHaloAlpha,
-           double GasHaloZeta,
-           double GasHaloZeta2,
-           double GasHaloCoreEntropy,
-	         double GasHaloRatio,
-           double GasHaloMetallicity,
+           FLOAT GasHaloScaleRadius,
+           FLOAT GasHaloDensity,
+           FLOAT GasHaloDensity2,
+           FLOAT GasHaloTemperature,
+           FLOAT GasHaloAlpha,
+           FLOAT GasHaloZeta,
+           FLOAT GasHaloZeta2,
+           FLOAT GasHaloCoreEntropy,
+	   FLOAT GasHaloRatio,
+           FLOAT GasHaloMetallicity,
            int   UseHaloRotation,
-           double RotationScaleVelocity,
-           double RotationScaleRadius,
-           double RotationPowerLawIndex,
-           double DiskMetallicityEnhancementFactor,
-           double AngularMomentum[MAX_DIMENSION],
-           double UniformVelocity[MAX_DIMENSION], 
+           FLOAT RotationScaleVelocity,
+           FLOAT RotationScaleRadius,
+           FLOAT RotationPowerLawIndex,
+           FLOAT DiskMetallicityEnhancementFactor,
+           FLOAT AngularMomentum[MAX_DIMENSION],
+           FLOAT UniformVelocity[MAX_DIMENSION], 
            int UseMetallicityField, 
            FLOAT GalaxySimulationInflowTime,
-           double GalaxySimulationInflowDensity,
+           FLOAT GalaxySimulationInflowDensity,
            int level,
-           double GalaxySimulationCR
+           FLOAT GalaxySimulationInitialBfield[MAX_DIMENSION],
+           int GalaxySimulationInitialBfieldTopology,
+           FLOAT GalaxySimulationCR,
+           int SetBaryons
           )
 {
   /* declarations */
@@ -191,9 +193,8 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
   int dim, i, j, k, m, field, disk, size, MetalNum, MetalIaNum, vel;
   int DeNum, HINum, HIINum, HeINum, HeIINum, HeIIINum, HMNum, H2INum,
     H2IINum, DINum, DIINum, HDINum, B1Num, B2Num, B3Num, PhiNum;
-  double DiskDensity, DiskVelocityMag;
+  float DiskDensity, DiskVelocityMag;
   int CRNum, DensNum;
-
   /* global-scope variables for disk potential functions (would be better if not global) */
 
   gScaleHeightR = ScaleHeightR;
@@ -247,6 +248,7 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
     FieldType[PhiNum = NumberOfBaryonFields++] = PhiField;
   }
   if (UsePoissonDivergenceCleaning) {
+    printf("Using Div Cleaning");
     FieldType[NumberOfBaryonFields++] = Phi_pField;
   }
 
@@ -283,18 +285,19 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
 
   if (ProcessorNumber != MyProcessorNumber) 
     return SUCCESS;
-
+  if(!SetBaryons)
+    return SUCCESS; //leave if baryon flag not on
   /* Set various units. */
 
-  double CriticalDensity = 1, BoxLength = 1;
+  float CriticalDensity = 1, BoxLength = 1;
   FLOAT a, dadt, ExpansionFactor = 1;
   if (ComovingCoordinates) {
     CosmologyComputeExpansionFactor(Time, &a, &dadt);
     ExpansionFactor = a/(1.0+InitialRedshift);
     CosmologyGetUnits(&DensityUnits, &LengthUnits, &TemperatureUnits,
 		      &TimeUnits, &VelocityUnits, Time);
-    CriticalDensity = 2.78e11*POW(HubbleConstantNow, 2); // in Msolar/Mpc_cm^3
-    BoxLength = ComovingBoxSize*ExpansionFactor/HubbleConstantNow;  // in Mpc_cm
+    CriticalDensity = 2.78e11*POW(HubbleConstantNow, 2); // in Msolar/Mpc^3
+    BoxLength = ComovingBoxSize*ExpansionFactor/HubbleConstantNow;  // in Mpc
   } else if( PointSourceGravity ){
     ENZO_FAIL("ERROR IN GALAXY SIM GRID INITIALIZE: non-cosmology units not supported for point source gravity");
   } else {
@@ -307,8 +310,8 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
   /* correct background density if it's not given in code units */
   if( UniformDensity < 1.0E-10 ){
     UniformDensity /= DensityUnits;
-    if( debug && MyProcessorNumber == ROOT_PROCESSOR ) 
-      fprintf(stdout,"Converting GalaxySimulationUniformDensity = %"GSYM" from CGS to code units\n",UniformDensity);
+    //if( debug && MyProcessorNumber == ROOT_PROCESSOR ) 
+     // fprintf(stdout,"Converting GalaxySimulationUniformDensity = %"GSYM" from CGS to code units\n",UniformDensity);
   } // end uniform density if
 
   /* Set up inflow */
@@ -330,7 +333,7 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
       require integration to get quantities we care about. 
       Assumes disk is located at the center of the domain. */
 
-  FLOAT far_left, far_right, largest_rad;
+  double far_left, far_right, largest_rad;
   
   far_left = DomainLeftEdge[0];
   far_right = DomainRightEdge[0];
@@ -346,7 +349,6 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
 
   struct CGMdata CGM_data(8192);
   halo_init(CGM_data, this, largest_rad);
-  if (debug) printf("Made halo profile\n");
 
   // for (int i=0; i<CGM_data.nbins; ++i)
   //   printf("%g %g %g %g\n", CGM_data.rad[i], CGM_data.n_rad[i], CGM_data.T_rad[i], CGM_data.press[i]);
@@ -368,9 +370,9 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
   //      BaryonField[MetalNum][i] = 1.0e-10;
  
   /* Loop over the mesh. */
-  double density, disk_dens;
-  double halo_vmag, disk_vel[MAX_DIMENSION], Velocity[MAX_DIMENSION];
-  double temperature, disk_temp, init_temp, initial_metallicity;
+  float density, disk_dens;
+  FLOAT halo_vmag, disk_vel[MAX_DIMENSION], Velocity[MAX_DIMENSION];
+  FLOAT temperature, disk_temp, init_temp, initial_metallicity;
   FLOAT r_sph, x, y = 0, z = 0;
   int n = 0, iter;
 
@@ -393,6 +395,7 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
 	if (GridRank > 2)
 	  z = CellLeftEdge[2][k] + 0.5*CellWidth[2][k];
 
+
 	for (dim = 0; dim < MAX_DIMENSION; dim++){
 	  Velocity[dim] = 0;
 	  disk_vel[dim] = 0;
@@ -411,11 +414,9 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
 	*/
 
 	density = HaloGasDensity(r_sph, CGM_data)/DensityUnits;
-	temperature = init_temp = HaloGasTemperature(r_sph, CGM_data);
-  disk_temp = DiskTemperature;
-	
-	FLOAT xpos, ypos, zpos, rsph, zheight, theta; 
-	double CellMass;
+	temperature = disk_temp = init_temp = HaloGasTemperature(r_sph, CGM_data);
+	FLOAT xpos, ypos, zpos, rsph, zheight, rcyl, theta; 
+	float CellMass;
 	FLOAT rp_hat[3];
 	FLOAT yhat[3];
 
@@ -481,7 +482,7 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
 	  if (r_sph < DiskRadius) {
 
 	    /* Beyond truncation radius */
-	    if( fabs(rcyl*LengthUnits/Mpc_cm) > TruncRadius ){
+	    if( fabs(rcyl*LengthUnits/Mpc) > TruncRadius ){
 	      disk_dens = 0.0;
 	      break;
 	    }
@@ -518,14 +519,14 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
 	      }
 
 	    DiskDensity = (GasMass * SolarMass
-			   / (8.0*pi*ScaleHeightz*Mpc_cm*POW(ScaleHeightR*Mpc_cm,2.0)))
+			   / (8.0*pi*ScaleHeightz*Mpc*POW(ScaleHeightR*Mpc,2.0)))
 	      / DensityUnits;   //Code units (rho_0) 
 
 	    CellMass = gauss_mass(rcyl*LengthUnits, zheight*LengthUnits,
 				  xpos*LengthUnits, ypos*LengthUnits,
 				  zpos*LengthUnits, inv, 
 				  DiskDensity*DensityUnits,
-				  ScaleHeightR*Mpc_cm, ScaleHeightz*Mpc_cm, 
+				  ScaleHeightR*Mpc, ScaleHeightz*Mpc, 
 				  CellWidth[0][0]*LengthUnits);
 
 	    disk_dens = CellMass/POW(CellWidth[0][0]*LengthUnits,3)/DensityUnits;
@@ -546,16 +547,11 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
 				       GalaxyMass, ScaleHeightR,
 				       ScaleHeightz, DMConcentration, Time);
 
-	    else if( DiskGravity > 0 ) {
-
-        if (!DiskPressureBalance)
-          DiskVelocityMag = DiskGravityCircularVelocity(r_sph*LengthUnits,
-                                                        rcyl*LengthUnits,
-                                                        zheight*LengthUnits)
-                            /VelocityUnits;
-        else // will also set disk_temp to be not isothermal and rotation will account for this
-          DiskForceBalance(CellWidth[0][0], zheight*LengthUnits, disk_dens, CGM_data, disk_temp, DiskVelocityMag);
-      }
+	    else if( DiskGravity > 0 )
+	      DiskVelocityMag = DiskGravityCircularVelocity(r_sph*LengthUnits,
+							    rcyl*LengthUnits,
+							    zheight*LengthUnits)
+		    /VelocityUnits;
         
 	    if (PointSourceGravity*DiskGravity != FALSE ) 
 	      ENZO_FAIL("Cannot activate both PointSource and Disk gravity options for Isolated Galaxy");
@@ -578,10 +574,10 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
 	   * 'Velocity' (which are currently set to CGM values) with their
 	   * appropriate disk values */
        
-	  if (disk_dens > density && fabs(rcyl*LengthUnits/Mpc_cm) <= TruncRadius){
+	  if (disk_dens > density && fabs(rcyl*LengthUnits/Mpc) <= TruncRadius){
         
 	    density = disk_dens;
-	    temperature = disk_temp;
+	    temperature = DiskTemperature;
         
 	    /* Here we're setting the disk to be X times more enriched -- DWS */
 	    if( UseMetallicityField )
@@ -628,6 +624,26 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
 	  printf("G_GSIC: negative or zero energy  n = %"ISYM"  temp = %"FSYM"   e = %"FSYM"\n",
 		 n, temperature, BaryonField[1][n]);
 
+	if ( UseMHD ){
+	  switch ( GalaxySimulationInitialBfieldTopology ){
+	  case 0: //uniform
+	    for (dim = 0; dim < GridRank; dim++) {
+	      if( UseMHDCT ){
+		MagneticField[dim][n] = GalaxySimulationInitialBfield[dim];
+	      }
+	      BaryonField[B1Num+dim][n] = GalaxySimulationInitialBfield[dim];
+	    }
+	    break;
+          default:
+	    ENZO_FAIL("undefined value of GalaxySimulationInitialBfieldTopology");
+	  }
+	  BaryonField[1][n] += 0.5*(BaryonField[B1Num][n]*BaryonField[B1Num][n]
+				    +BaryonField[B2Num][n]*BaryonField[B2Num][n]
+				    +BaryonField[B3Num][n]*BaryonField[B3Num][n])/
+	    BaryonField[0][n];
+	}//UseMHD
+	if( CRModel )
+	  BaryonField[CRNum][n] = BaryonField[DensNum][n] * GalaxySimulationCR;
 
 	// Set multispecies fields!
 	// this attempts to set them such that species conservation is maintained,
@@ -658,9 +674,6 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
 	} // if(MultiSpecies)
 	
       } // end loop over grids
-    
-  if( CRModel )
-    BaryonField[CRNum][n] = BaryonField[DensNum][n] * GalaxySimulationCR;
 
   return SUCCESS;
 
@@ -669,9 +682,9 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
 /*
 * Initialization routines
 * Order:
-*   halo mass (DarkMatterMassEnclosed)
+*   NFW mass (NFWDarkMatterMassEnclosed)
 *   cell mass (gauss_mass, rot_to_disk)
-*   disk velocity (gas_vel+DiskGravity OR DiskPotential+findZicm+DiskForceBalance etc)
+*   disk velocity (gas_vel OR ???)
 *   chemistry (setup_chem, bilinear_interp)
 *   CGM profile
 */
@@ -685,45 +698,28 @@ int grid::GalaxySimulationInitializeGrid(double DiskRadius,
 
    Input is the radius in CGS units; output is the enclosed mass at that radius in CGS units.
 */
-double DarkMatterMassEnclosed(FLOAT r){
+double NFWDarkMatterMassEnclosed(double r){
 
-  double M_within_r;
+  double M, C, R200, rho_0, Rs, M_within_r;
+  double rho_crit = 1.8788e-29*0.49;
+  
+  // GSDarkMatterConcentration is the same as DiskGravityDarkMatterConcentration
+  // if the latter is in use, same with GSGalaxyMass & DGDarkMatterMass
 
-  if (DiskGravityDarkMatterUseNFW) {
-    double M, C, R200, rho_0, Rs;
-    double rho_crit = 1.8788e-29*0.49;
-    
-    // GSDarkMatterConcentration is the same as DiskGravityDarkMatterConcentration
-    // if the latter is in use, same with GSGalaxyMass & DGDarkMatterMass
-
-    M = GalaxySimulationGalaxyMass * SolarMass;  // halo total mass in CGS
-    C = GalaxySimulationDMConcentration;  // concentration parameter for NFW halo
-    
-    R200 = POW(3.0/(4.0*pi)*M/(200.*rho_crit),1./3.);  // virial radius in CGS
-    Rs = R200/C;  // scale radius of NFW halo in CGS
-    rho_0 = 200.0*POW(C,3)/3.0/(log(1.0+C) - C/(1.0+C))*rho_crit;  // rho_0 for NFW halo in CGS
-
-    // mass w/in radius R
-    M_within_r = 4.0*pi*rho_0*POW(Rs,3.0)*(log((Rs+r)/Rs) - r/(Rs+r));
-
-  } else if (DiskGravityDarkMatterUseB95) {
-    FLOAT R0 = DiskGravityDarkMatterR*Mpc_cm;
-    FLOAT x = r/R0*LengthUnits;
-	  double M0 = pi*DiskGravityDarkMatterDensity*R0*R0*R0;
-
-	  M_within_r = M0*(-2.0*atan(x)+2.0*log(1+x)+log(1.0+x*x));
-
-  } else {
-    ENZO_FAIL("This GalaxySimulationGasHalo option requires a DiskGravityDarkMatter profile.")
-  }
-
+  M = GalaxySimulationGalaxyMass * SolarMass;  // halo total mass in CGS
+  C = GalaxySimulationDMConcentration;  // concentration parameter for NFW halo
+  
+  R200 = POW(3.0/(4.0*pi)*M/(200.*rho_crit),1./3.);  // virial radius in CGS
+  Rs = R200/C;  // scale radius of NFW halo in CGS
+  rho_0 = 200.0*POW(C,3)/3.0/(log(1.0+C) - C/(1.0+C))*rho_crit;  // rho_0 for NFW halo in CGS
+  // mass w/in radius R
+  M_within_r = 4.0*pi*rho_0*POW(Rs,3.0)*(log((Rs+r)/Rs) - r/(Rs+r));
   return M_within_r;
   
 }
 
 // Computes the total mass in a given cell by integrating the density profile using 5-point Gaussian quadrature
-double gauss_mass(FLOAT r, FLOAT z, FLOAT xpos, FLOAT ypos, FLOAT zpos, FLOAT inv [3][3], 
-                  double DiskDensity, double ScaleHeightR, double ScaleHeightz, FLOAT cellwidth)
+float gauss_mass(FLOAT r, FLOAT z, FLOAT xpos, FLOAT ypos, FLOAT zpos, FLOAT inv [3][3], float DiskDensity, FLOAT ScaleHeightR, FLOAT ScaleHeightz, FLOAT cellwidth)
 {
   
     FLOAT EvaluationPoints [5] = {-0.90617985,-0.53846931,0.0,0.53846931,0.90617985};
@@ -749,11 +745,11 @@ double gauss_mass(FLOAT r, FLOAT z, FLOAT xpos, FLOAT ypos, FLOAT zpos, FLOAT in
                 if( PointSourceGravity > 0 )
                     yResult[j] += cellwidth/2.0*Weights[k]*PEXP(-rrot/ScaleHeightR)/POW(cosh(zrot/(2.0*ScaleHeightz)),2);
                 else if( DiskGravity > 0 ){
-                    if( rrot/Mpc_cm < SmoothRadius )
+                    if( rrot/Mpc < SmoothRadius )
                         yResult[j] += cellwidth/2.0*Weights[k]/cosh(rrot/ScaleHeightR)/cosh(fabs(zrot)/ScaleHeightz);
-                    else if( rrot/Mpc_cm < TruncRadius )
+                    else if( rrot/Mpc < TruncRadius )
                         yResult[j] += cellwidth/2.0*Weights[k]/cosh(rrot/ScaleHeightR)/cosh(fabs(zrot)/ScaleHeightz)
-                                        *0.5*(1.0+cos(pi*(rrot-SmoothRadius*Mpc_cm)/(SmoothLength*Mpc_cm)));
+                                        *0.5*(1.0+cos(pi*(rrot-SmoothRadius*Mpc)/(SmoothLength*Mpc)));
                 } // end disk gravity if
 
             }
@@ -778,9 +774,7 @@ void rot_to_disk(FLOAT xpos, FLOAT ypos, FLOAT zpos, FLOAT &xrot, FLOAT &yrot, F
 //
 // Disk velocity with PointSourceGravity
 //
-double gasvel(FLOAT radius, double DiskDensity, FLOAT ExpansionFactor, 
-              double GalaxyMass, double ScaleHeightR, double ScaleHeightz,
-              double DMConcentration, FLOAT Time)
+float gasvel(FLOAT radius, float DiskDensity, FLOAT ExpansionFactor, float GalaxyMass, FLOAT ScaleHeightR, FLOAT ScaleHeightz, float DMConcentration, FLOAT Time)
 {
 
  double OMEGA=OmegaLambdaNow+OmegaMatterNow;                 //Flat Universe
@@ -791,7 +785,7 @@ double gasvel(FLOAT radius, double DiskDensity, FLOAT ExpansionFactor,
 
  double H = sqrt(HubbleConstantNow*100*HubbleConstantNow*100*(OmegaLambdaNow+OmegaMatterNow*POW(ExpansionFactor,-3)-(OMEGA-1.)*POW(ExpansionFactor,-2)));                                
 
- double r_200 = (1.63e-2*POW(GalaxyMass,1.0/3.0)*POW((OmegaLambdaNow+OmegaMatterNow*POW(ExpansionFactor, -3)-(OMEGA-1.0)*POW(ExpansionFactor,-2)),-1.0/3.0)*ExpansionFactor*POW(H,-2.0/3.0)*POW(100,2.0/3.0))*Mpc_cm/1.0e5;
+ double r_200 = (1.63e-2*POW(GalaxyMass,1.0/3.0)*POW((OmegaLambdaNow+OmegaMatterNow*POW(ExpansionFactor, -3)-(OMEGA-1.0)*POW(ExpansionFactor,-2)),-1.0/3.0)*ExpansionFactor*POW(H,-2.0/3.0)*POW(100,2.0/3.0))*Mpc/1.0e5;
  //virial radius [m]: M_200/M_Solar = GalaxyMass
 
  double M_gas, M_DM, M_Tot, Acc, V_Circ;
@@ -800,7 +794,7 @@ double gasvel(FLOAT radius, double DiskDensity, FLOAT ExpansionFactor,
 
  // Mass of gas disk and DM at given radius
 
-  M_gas=8.0*M_PI*ScaleHeightz*Mpc_cm/100*ScaleHeightR*Mpc_cm/100*ScaleHeightR*Mpc_cm/100*DiskDensity*DensityUnits*1000*PEXP(-r/(ScaleHeightR*Mpc_cm/100))*(PEXP(r/(ScaleHeightR*Mpc_cm/100))-r/(ScaleHeightR*Mpc_cm/100)-1.0);
+  M_gas=8.0*M_PI*ScaleHeightz*Mpc/100*ScaleHeightR*Mpc/100*ScaleHeightR*Mpc/100*DiskDensity*DensityUnits*1000*PEXP(-r/(ScaleHeightR*Mpc/100))*(PEXP(r/(ScaleHeightR*Mpc/100))-r/(ScaleHeightR*Mpc/100)-1.0);
 
      M_DM=(M_200/f_C)*(log(1.0+r/r_s)-(r/r_s)/(1.0+r/r_s));
 
@@ -851,7 +845,7 @@ double gasvel(FLOAT radius, double DiskDensity, FLOAT ExpansionFactor,
 //
 // Disk velocity with DiskGravity. Arguments should be in cgs
 //
-double DiskGravityStellarAccel(FLOAT rcyl, FLOAT z){
+double DiskGravityStellarAccel(double rcyl, double z){
     // return (cylindrical) radial component of acceleration ...? in cgs?
     // Potential from  Miyamoto & Nagai 75
 
@@ -860,460 +854,36 @@ double DiskGravityStellarAccel(FLOAT rcyl, FLOAT z){
     accelcylR = GravConst * DiskGravityStellarDiskMass*SolarMass * rcyl
               / sqrt(POW(
                     POW(rcyl,2)
-                  + POW(DiskGravityStellarDiskScaleHeightR*Mpc_cm
+                  + POW(DiskGravityStellarDiskScaleHeightR*Mpc
                         + sqrt(POW(z,2)
-                             + POW(DiskGravityStellarDiskScaleHeightz*Mpc_cm,2)),
+                             + POW(DiskGravityStellarDiskScaleHeightz*Mpc,2)),
                         2),
                      3));
 
     return accelcylR;
 }
 
-double DiskGravityBulgeAccel(FLOAT rsph) { // cgs arguments
+double DiskGravityBulgeAccel(double rsph) { // cgs arguments
     double accelsph;
 
     accelsph = GravConst * DiskGravityStellarBulgeMass*SolarMass
-             / POW(rsph + DiskGravityStellarBulgeR*Mpc_cm,2);
+             / POW(rsph + DiskGravityStellarBulgeR*Mpc,2);
 
     return accelsph;
 }
 
-double DiskGravityCircularVelocity(FLOAT rsph, FLOAT rcyl, FLOAT z) {
-    double acc=0, velmag;
+double DiskGravityCircularVelocity(double rsph, double rcyl, double z) {
+    double acc, velmag;
     
-    if (DiskGravityDarkMatterUseNFW || DiskGravityDarkMatterUseB95)
-      acc = halo_g_of_r(rsph);
-
-    acc += DiskGravityStellarAccel(rcyl, z)
-         + DiskGravityBulgeAccel(rsph);
+    acc = GravConst*NFWDarkMatterMassEnclosed(rsph)/POW(rsph,2)
+        + DiskGravityStellarAccel(rcyl, z)
+        + DiskGravityBulgeAccel(rsph);
 
     velmag = sqrt(acc*rcyl); // cgs
     return velmag;
 }
 
-/* -------------------- BEGINNING of Functions for thermal pressure balance in the disk --------------------
-  Assumes Burkert 95 DM potential. Originally designed for galaxies in an ICM wind. See Tonnesen & Bryan 09.
-*/
-
-float DiskPotentialGasDensity(FLOAT r,FLOAT z){
-/*
- *  computes gas density within galaxy disk, according to eq
- *
- *    (Mgas/8*pi*a^2*b)*sech(r/a)*sech*(z/b)
- *
- *  Smoothed by a cosine fcn beyond SmoothRadius
- *
- *  Parameteres:
- *  ------------
- *    r - cylindrical radius (code units)
- *    z - cylindrical height (code units)
- *
- *  Returns: density (in grams/cm^3)
- *
- */
-  double density = MgasScale*SolarMass/(8.0*pi*POW(gScaleHeightR*Mpc_cm,2)*gScaleHeightz*Mpc_cm);
-  density /= (cosh(r*LengthUnits/gScaleHeightR/Mpc_cm)*cosh(z*LengthUnits/gScaleHeightz/Mpc_cm));
-
-  if(fabs(r*LengthUnits/Mpc_cm) > SmoothRadius && fabs(r*LengthUnits/Mpc_cm) <= TruncRadius)
-    density *= 0.5*(1.0+cos(pi*(r*LengthUnits-SmoothRadius*Mpc_cm)/(SmoothLength*Mpc_cm)));
-  return density;
-} // end DiskPotentialGasDensity
-
-
-double findZicm(FLOAT r, struct CGMdata& CGM_data){
-  /*  
-   *  Finds the height above the disk plane where the disk gas density
-   *  matches the halo's gas density (using bisection)
-   *
-   *  Parameters:
-   *  -----------
-   *    r - cylindrical radius (code units)
-   *
-   *  Returns: zicm, edge of disk, (code units)
-   */
-
-  static const double X_TOL = 1e-7*Mpc_cm/LengthUnits; // sub pc resolution
-  static const int MAX_ITERS = 50; int iters=0;
-
-  double z_lo = 0.0,z_hi = 0.01*Mpc_cm/LengthUnits,z_new,f_lo,f_hi,f_new;
-  f_hi = DiskPotentialGasDensity(r,z_hi) - HaloGasDensity(sqrt(r*r+z_hi*z_hi), CGM_data); // -ve
-  f_lo = DiskPotentialGasDensity(r,z_lo) - HaloGasDensity(sqrt(r*r+z_lo*z_lo), CGM_data); // +ve
-
-  if(f_lo < 0.0) return 0.0; // beyond the disk
-  if(f_hi > 0.0) ENZO_FAIL("ERROR IN GALAXY INITIALIZE: HALO IS UNDER-PRESSURIZED");
-
-  while(iters++ < MAX_ITERS ){
-
-    z_new = (z_hi+z_lo)/2.0;
-    f_new = DiskPotentialGasDensity(r,z_new)
-            - HaloGasDensity(sqrt(r*r+z_new*z_new), CGM_data);
-
-    if( fabs(f_new) == 0.0 ) return z_new;
-    if( f_new*f_lo > 0.0 ){
-      z_lo = z_new; f_lo = f_new;
-    }
-    else{
-      z_hi = z_new; f_hi = f_new;
-    }
-    if( fabs(z_hi - z_lo) <= X_TOL ) return z_new;
-  }
-
-  ENZO_FAIL("ERROR IN GALAXY INITIALIZE: findZicm FAILED TO CONVERGE");
-  return -1.0;
-}
-
-void DiskForceBalance(FLOAT cellwidth, FLOAT z, double density, struct CGMdata& CGM_data, double &temperature, double &rotvel)
-{
-  /* 
-   *  DISK POTENTIAL CIRCULAR VELOCITY
-   *
-   *      Sets disk temperature & circular velocity (in code units) given height z
-   *      and rcyl (radius in plane) in disk. Velocity includes the effect of
-   *      thermal pressure and so is not just the sqrt(G M/rcyl).
-   *      Note that for historical reasons rcyl is an external. *
-   */
-
-  extern FLOAT rcyl;                    // will be in code units
-  double PbulgeComp1(double zint);       // (density times Stellar bulge force)
-  double PbulgeComp2(double zint);       // same but for r2 (3D distance)
-  double PstellarComp1(double zint);     // (density times stellar disk force)
-  double PstellarComp2(double zint);     // same but for r2 (3D distance plane)
-  double PDMComp1(double zint);          // (density times dark matter halo force)
-  double PDMComp2(double zint);          // same but for r2 (3D distance plane)
-
-  double Pressure,Pressure2,zicm,zicm2,zicmf=0.0,zsmall=0.0,
-    zicm2f=0.0,zint,FdPdR,FtotR,denuse,rsph,vrot,bulgeComp,rsph_icm;
-
-  /* Distances in cgs */
-  r2 = (rcyl+0.01*cellwidth)*LengthUnits;  // in plane radius
-  rsph = sqrt(POW(rcyl*LengthUnits,2)+POW(z,2)); // 3D radius
-
-  /*  Determine zicm: the height above the disk where rho -> rho_ICM,
-   *  use this to find P_icm and dP_icm  */
-
-  if (fabs(rcyl*LengthUnits/Mpc_cm) <= SmoothRadius) {
-
-    zicm  = findZicm(rcyl, CGM_data)*LengthUnits;
-    zicm2 = findZicm(r2/LengthUnits, CGM_data)*LengthUnits; // r2 = rcyl + delta
-
-    if( fabs(z) < fabs(zicm) ){
-
-      /* Integrate the density times force to get pressure.  Do this
-         at two different locations to get a numerical gradient. */
-
-      bulgeComp = (DiskGravityStellarBulgeMass == 0.0 ? 
-       0.0 : qromb(PbulgeComp1, fabs(zicm), fabs(z)));
-      Pressure  = bulgeComp + qromb(PstellarComp1, fabs(zicm), fabs(z));
-      Pressure += qromb(PDMComp1, fabs(zicm), fabs(z));
-
-      bulgeComp = (DiskGravityStellarBulgeMass == 0.0 ? 
-       0.0 : qromb(PbulgeComp2, fabs(zicm2), fabs(z)));
-      Pressure2  = bulgeComp + qromb(PstellarComp2, fabs(zicm2), fabs(z));
-      Pressure2 += qromb(PDMComp2, fabs(zicm2), fabs(z));
-
-    }  // end |z| < |zicm| if
-
-  }  else {
-
-    if (fabs(rcyl*LengthUnits/Mpc_cm) <= TruncRadius ) {
-
-      zicm  = findZicm(rcyl, CGM_data)*LengthUnits;
-      zicm2 = findZicm(r2/LengthUnits, CGM_data)*LengthUnits;
-
-
-      if (fabs(z) < fabs(zicm)) {
-        
-        bulgeComp = (DiskGravityStellarBulgeMass == 0.0 ?
-              0.0 : qromb(PbulgeComp1, fabs(zicm), fabs(z)));
-        Pressure  = (bulgeComp + qromb(PDMComp1, fabs(zicm), fabs(z)) + qromb(PstellarComp1, fabs(zicm), fabs(z)))
-          *(0.5*(1.0+cos(pi*(rcyl*LengthUnits-SmoothRadius*Mpc_cm)/
-            (SmoothLength*Mpc_cm))));
-
-        bulgeComp = (DiskGravityStellarBulgeMass == 0.0 ?
-              0.0 : qromb(PbulgeComp2, fabs(zicm2), fabs(z)));
-        Pressure2 = (bulgeComp + qromb(PDMComp2, fabs(zicm2), fabs(z)) + qromb(PstellarComp2, fabs(zicm2), fabs(z)))
-          *(0.5*(1.0+cos(pi*(r2-SmoothRadius*Mpc_cm)/(SmoothLength*Mpc_cm))));
-
-      } // end |z| < |zicm| if
-
-    } // end r_cyle < TruncRadius if
-
-  } // end r_cyl < SmoothRadius if/else
-
-  denuse = density*DensityUnits; 
-
-  if (Pressure < 0.0 && fabs(rcyl)*LengthUnits/Mpc_cm <= TruncRadius && fabs(z) <= fabs(zicm)) {
-    fprintf(stderr,"neg pressure:  P = %"FSYM", z = %"FSYM", r = %"FSYM"\n", Pressure, z/Mpc_cm, rcyl*LengthUnits/Mpc_cm);
-  }
-  if (fabs(rcyl)*LengthUnits/Mpc_cm >= TruncRadius || fabs(zicm) <= fabs(z)){
-    Pressure = 0.0;
-    Pressure2 = 0.0;
-    denuse = HaloGasDensity(rsph/LengthUnits, CGM_data);
-  }
-  if (Pressure2 <= 0.0 && Pressure <= 0.0){
-    Pressure = 0.0;
-    Pressure2 = 0.0;
-    denuse = HaloGasDensity(rsph/LengthUnits, CGM_data);
-  }
-  if (Pressure <= 0.0) {
-    Pressure = 0.0;
-    Pressure2 = 0.0;
-    denuse = HaloGasDensity(rsph/LengthUnits, CGM_data);
-  }
-  if (denuse < HaloGasDensity(rsph/LengthUnits, CGM_data)) {
-    fprintf(stderr,"denuse small:  %"FSYM"\n", denuse);
-  }
-  
-  rsph_icm = sqrt(rcyl*rcyl+POW(zicm/LengthUnits,2));  // code units
-  Picm = HaloGasDensity(rsph_icm, CGM_data)*kboltz*HaloGasTemperature(rsph_icm, CGM_data)/(mu*mh);
-  temperature=mu*mh*(Picm+Pressure)/(kboltz*denuse);
-
-  /* Calculate pressure gradient */
-
-  FdPdR = (Pressure2 - Pressure)/(r2-rcyl*LengthUnits)/density; 
-
-  /* Calculate Gravity = Fg_DM + Fg_StellarDisk + Fg_StellaDiskGravityStellarBulgeR */
-  
-  FtotR  = (-pi)*GravConst*DiskGravityDarkMatterDensity*
-            POW(DiskGravityDarkMatterR*Mpc_cm,3)/POW(rsph,3)*rcyl*LengthUnits
-            *(-2.0*atan(rsph/DiskGravityDarkMatterR/Mpc_cm) + 
-              2.0*log(1.0+rsph/DiskGravityDarkMatterR/Mpc_cm) +
-              log(1.0+POW(rsph/DiskGravityDarkMatterR/Mpc_cm,2)));
-  FtotR = -1*halo_g_of_r(rsph)/rsph * rcyl*LengthUnits;
-  FtotR += -GravConst*DiskGravityStellarDiskMass*SolarMass*rcyl*LengthUnits
-            /sqrt(POW(POW(rcyl*LengthUnits,2) + 
-            POW(DiskGravityStellarDiskScaleHeightR*Mpc_cm +
-                sqrt(POW(z,2) + 
-                POW(DiskGravityStellarDiskScaleHeightz*Mpc_cm,2)),
-                2),
-            3));
-  FtotR += -GravConst*DiskGravityStellarBulgeMass*SolarMass
-           /POW(sqrt(POW(z,2) + POW(rcyl*LengthUnits,2)) + 
-            DiskGravityStellarBulgeR*Mpc_cm,2)*rcyl*LengthUnits/
-            sqrt(POW(z,2) +POW(rcyl*LengthUnits,2));
-
-  /* Some error checking. */
-
-  if (temperature < 0.0) 
-    fprintf(stderr,"G_GSIG: temp = %"FSYM", P = %"FSYM", z = %"FSYM", zicm = %"FSYM", zicmf=%"FSYM", zsmall=%"FSYM", rcyl = %"FSYM"\n", 
-      temperature, Pressure, z/Mpc_cm, zicm/Mpc_cm, zicmf, zsmall, rcyl*LengthUnits/Mpc_cm);
-  if ((FtotR - FdPdR) > 0.0) { 
-    fprintf(stderr,"G_GSIG: FtotR = %"FSYM", FdPdR = %"FSYM", P = %"FSYM",P2 = %"FSYM", Picm = %"FSYM", dr = %"FSYM", rcyl = %"FSYM", z = %"FSYM"\n", 
-      FtotR, FdPdR, Pressure, Pressure2, Picm, r2-rcyl*LengthUnits, rcyl*LengthUnits/Mpc_cm, z/Mpc_cm);
-    FdPdR = 0.0;
-  } // end FtotR - FdPdr > 0.0 if
-
-  /* Find circular velocity by balancing FG and dPdR against centrifugal force */
-
-  vrot=sqrt(-rcyl*LengthUnits*(FtotR-FdPdR));
-
-  if (denuse == densicm) vrot = 0.0;
-
-  rotvel = vrot/VelocityUnits; //code units
-
-} // end DiskForceBalance
-
-// *************************************************************
-// The functions integrated by qromb (parameter must be external)
-
-// Given the in place radius and height, this returns density times
-//    the stellar bulge force
-
-double PbulgeComp_general(double rvalue, double zint)
-{
-  return (-MgasScale*SolarMass/
-    (2*pi*POW(gScaleHeightR*Mpc_cm,2)*gScaleHeightz*Mpc_cm)*0.25/
-    cosh(rvalue/gScaleHeightR/Mpc_cm) / cosh(fabs(zint)/gScaleHeightz/Mpc_cm)*
-    GravConst*DiskGravityStellarBulgeMass*SolarMass/
-    POW((sqrt(POW(zint,2) + POW(rvalue,2)) + 
-         DiskGravityStellarBulgeR*Mpc_cm),2)*fabs(zint)/
-    sqrt(POW(zint,2)+POW(rvalue,2)));
-}
-
-// Stellar Bulge functions
-
-double PbulgeComp1(double zint)
-{
-  extern FLOAT rcyl;
-  return PbulgeComp_general(rcyl*LengthUnits, zint);
-}
-
-double PbulgeComp2(double zint)
-{
-  extern FLOAT r2;
-  return PbulgeComp_general(r2, zint);
-}
-
-// Given the in place radius and height, this returns density times
-//    the stellar disk force
-
-double PstellarComp_general(double rvalue, double zint)
-{
-  return (-MgasScale*SolarMass/
-    (2*pi*POW(gScaleHeightR*Mpc_cm,2)*gScaleHeightz*Mpc_cm)*0.25/
-    cosh(rvalue/gScaleHeightR/Mpc_cm) / cosh(fabs(zint)/gScaleHeightz/Mpc_cm)*
-    GravConst*DiskGravityStellarDiskMass*SolarMass*
-    (DiskGravityStellarDiskScaleHeightR*Mpc_cm + 
-     sqrt(POW(zint,2) + POW(DiskGravityStellarDiskScaleHeightz*Mpc_cm,2)))*
-    fabs(zint)/
-    sqrt(POW(POW(rvalue,2) + 
-       POW((DiskGravityStellarDiskScaleHeightR*Mpc_cm + 
-      sqrt(POW(zint,2) + 
-           POW(DiskGravityStellarDiskScaleHeightz*Mpc_cm,2)))
-           ,2)
-       ,3))/
-    sqrt(POW(zint,2)+POW(DiskGravityStellarDiskScaleHeightz*Mpc_cm,2)));
-}
-
-// Stellar Disk functions
-
-double PstellarComp1(double zint)
-{
-  extern FLOAT rcyl;
-  return PstellarComp_general(rcyl*LengthUnits, zint);
-}
-
-double PstellarComp2(double zint)
-{
-  extern FLOAT r2;
-  return PstellarComp_general(r2, zint);
-}
-
-double PDMComp_general(double rvalue, double zint){
-/* --------------------------------------------------------
- * PDMComp_general
- * --------------------------------------------------------
- * General function for computing the DM contribution to
- * local (vertical) pressure on the gas in the galaxy's disk.
- * This returns the gas density at a given position
- * times the force on the gas due to the dark matter
- * --------------------------------------------------------- */
-
-  float gas_density;
-  float F;             // dark matter force
-  float rsph; // 3D, spherical radius
-
-
-  /* compute gas density */
-  gas_density  = MgasScale*SolarMass / (8.0 * pi * POW(gScaleHeightR*Mpc_cm,2)*gScaleHeightz*Mpc_cm);
-  gas_density /= (cosh(rvalue/gScaleHeightR/Mpc_cm)*cosh(fabs(zint)/gScaleHeightz/Mpc_cm));
-
-  rsph = sqrt(rvalue*rvalue + zint*zint);
-
-  /* fabs(zint) is because this is the force in the direction downward */
-  F = -1*fabs(zint) * halo_g_of_r(rsph)/rsph;
-
-  return gas_density * F;
-}
-
-/* DM pressure integration */
-double PDMComp1(double zint){
-  extern FLOAT rcyl;
-  return PDMComp_general(rcyl*LengthUnits, zint);
-}
-
-double PDMComp2(double zint){
-  extern FLOAT r2;
-  return PDMComp_general(r2, zint);
-}
-
-// Will be called by qromb to find the pressure at every point in disk.
-
-#define FUNC(x) ((*func)(x))
-
-double trapzd(double (*func)(double), double a, double b, int n)
-{
-  static double s;
-  static int it;
-  int j;
-  double del, sum, tnm, x;
-
-  if (n == 1){
-    it = 1;
-    return (s=0.5*(b-a)*(FUNC(a)+FUNC(b)));
-  }
-
-  tnm = it;
-  del = (b-a)/tnm;
-  x = a+0.5*del;
-  for (sum=0.0,j=1;j<=it;j++,x+=del) sum += FUNC(x);
-  it *= 2;
-  s = 0.5*(s+(b-a)*sum/tnm);
-  return s;
-} // end trapezoid
-
-#define K 7  // FIXME
-FLOAT polint_c[K+1];
-FLOAT polint_d[K+1];
-
-/* also called by qromb */
-void polint(double xa[],double ya[],int n,double x,double *y,double *dy)
-{
-  int i,m,ns=1;
-  double den,dif,dift,ho,hp,w;
-  void nrerror(char *);
-
-  dif=fabs(x-xa[1]);
-  for (i=1;i<=n;i++) {
-    if ( (dift=fabs(x-xa[i])) < dif) {
-      ns=i;
-      dif=dift;
-    }
-    polint_c[i]=ya[i];
-    polint_d[i]=ya[i];
-  } // end i for
-  
-  *y=ya[ns--];
-  for (m=1;m<n;m++) {
-    for (i=1;i<=n;i++) {
-      ho=xa[i]-x;
-      hp=xa[i+m]-x;
-      w=polint_c[i+1]-polint_d[i];
-      if ( (den=ho-hp) == 0.0 ) fprintf(stderr,"Error in routine POLINT\n");
-      den = w/den;
-      polint_d[i]=hp*den;
-      polint_c[i]=ho*den;
-    } // end i for
-    *dy=(2*ns < (n-m) ? polint_c[ns+1] : polint_d[ns--]);
-    *y += (*dy);
-  } // end m for
-} // end polint
-
-#define EPS 1.0e-6
-#define JMAX 20
-#define JMAXP JMAX+1
-
-/* Main integration routine called by DiskForceBalance to find Pressure */
-double qromb(double (*func)(double), double a, double b)
-{
-  if( a == b ) return 0.0;
-  double ss,dss,trapzd(double (*func)(double), double a, double b, int n);
-  int j;
-  double h[JMAXP+1], s[JMAXP+1];
-  void polint(double xa[],double ya[],int n,double x,double *y,double *dy),nrerror(char *);
-
-  h[1] = 1.0;
-  for (j=1;j<=JMAX;j++){
-    s[j] = trapzd(func,a,b,j);
-    if( isnan(s[j]) ) ENZO_FAIL("NaN's during pressure integration in GalaxySimulationInitialize");
-    if (j >= K) {
-      polint(&h[j-K],&s[j-K],K,0.0,&ss,&dss);
-      if (fabs(dss) < EPS*fabs(ss)) return ss;
-    }
-    s[j+1]=s[j];
-    h[j+1]=0.25*h[j]; 
-  }
-  /* Print bug report and exit */
-  fprintf(stderr,"Too many steps in routine QROMB\n");
-  fprintf(stderr,"\t>> rcyl = %"FSYM", z = %"FSYM", z_icm = %"FSYM"\n", rcyl*LengthUnits/Mpc_cm, a/Mpc_cm, b/Mpc_cm);
-  fprintf(stderr,"\t>> ss = %"FSYM", dss = %"FSYM"\n", ss, dss);
-  ENZO_FAIL("FAILED IN QROMB IN GRID_GALAXYSIMULATIONINIALIZE\n");
-  return -1.0;
-}
-
-/* -------------------- END of Functions for thermal pressure balance in the disk -------------------- */
-
-/* --------------------Functions for initializing chemistry ------------------------------- */
+/* Function for initializing chemistry */
 void setup_chem(float density, float temperature, int equilibrate,
 		float& DEdest, float& HIdest, float& HIIdest,
 		float& HeIdest, float& HeIIdest, float& HeIIIdest,
@@ -1335,15 +905,15 @@ void setup_chem(float density, float temperature, int equilibrate,
     
     for (iter=0; iter < EquilibriumTable.dim_size; ++iter) {
       if (density < EquilibriumTable.density[iter]) {
-        dens_indx = iter-1;
-        break;
+	dens_indx = iter-1;
+	break;
       }
     }
     
     for (iter=0; iter<EquilibriumTable.dim_size; ++iter) {
       if (temperature < EquilibriumTable.temperature[iter]) {
-        temp_indx = iter-1;
-        break;
+	temp_indx = iter-1;
+	break;
       }
     }
 
@@ -1359,7 +929,7 @@ void setup_chem(float density, float temperature, int equilibrate,
 
     // Density or temp higher than table; unchanged from inital value
     if (dens_indx == EquilibriumTable.dim_size-1 ||
-	      temp_indx == EquilibriumTable.dim_size-1)
+	temp_indx == EquilibriumTable.dim_size-1)
       interpolate = false;
 
     if (interpolate) {
@@ -1500,18 +1070,18 @@ void setup_chem(float density, float temperature, int equilibrate,
       DEdest =  EquilibriumTable.de[EquilibriumTable.dim_size * temp_indx + dens_indx];
 
       if (MultiSpecies > 1) {
-        HMdest =  EquilibriumTable.HM[EquilibriumTable.dim_size * temp_indx + dens_indx];
+	HMdest =  EquilibriumTable.HM[EquilibriumTable.dim_size * temp_indx + dens_indx];
 
-        H2Idest = EquilibriumTable.H2I[EquilibriumTable.dim_size * temp_indx + dens_indx];
+	H2Idest = EquilibriumTable.H2I[EquilibriumTable.dim_size * temp_indx + dens_indx];
 
-        H2IIdest = EquilibriumTable.H2II[EquilibriumTable.dim_size * temp_indx + dens_indx];
+	H2IIdest = EquilibriumTable.H2II[EquilibriumTable.dim_size * temp_indx + dens_indx];
       }
       if (MultiSpecies > 2) {
-        DIdest =  EquilibriumTable.DI[EquilibriumTable.dim_size * temp_indx + dens_indx];
+	DIdest =  EquilibriumTable.DI[EquilibriumTable.dim_size * temp_indx + dens_indx];
 
-        DIIdest = EquilibriumTable.DII[EquilibriumTable.dim_size * temp_indx + dens_indx];
+	DIIdest = EquilibriumTable.DII[EquilibriumTable.dim_size * temp_indx + dens_indx];
 
-        HDIdest = EquilibriumTable.HDI[EquilibriumTable.dim_size * temp_indx + dens_indx];
+	HDIdest = EquilibriumTable.HDI[EquilibriumTable.dim_size * temp_indx + dens_indx];
       }
     } // end no interpolation
   } // end if equilibrate
@@ -1530,13 +1100,13 @@ void setup_chem(float density, float temperature, int equilibrate,
 
     if(MultiSpecies > 1){
       HMdest = TestProblemData.HM_Fraction *
-	            TestProblemData.HydrogenFractionByMass * density;
+	TestProblemData.HydrogenFractionByMass * density;
    
       H2Idest = 2 * TestProblemData.H2I_Fraction *
-	            TestProblemData.HydrogenFractionByMass * density;
+	TestProblemData.HydrogenFractionByMass * density;
    
       H2IIdest = 2 * TestProblemData.H2II_Fraction 
-	              * TestProblemData.HydrogenFractionByMass * density;
+	* TestProblemData.HydrogenFractionByMass * density;
     }
 
     // HII density is calculated by subtracting off the various ionized fractions
@@ -1610,14 +1180,14 @@ double bilinear_interp(double x, double y,
    Note: using global variables w/following units:
 
    GalaxySimulationGasHalo: integer, >= 0
-   GalaxySimulationGasHaloScaleRadius, units of Mpc_cm
+   GalaxySimulationGasHaloScaleRadius, units of Mpc
    GalaxySimulationGasHaloDensity, units of grams/cm^3
    GalaxySimulationGasHaloTemperature, units of Kelvin
    GalaxySimulationGasHaloAlpha, power-law index; unitless
    GalaxySimulationGasHaloCoreEntropy, units of keV cm^2
    GalaxySimulationGasHaloMetallicity, units of Zsun
 */
-double HaloGasDensity(FLOAT R, struct CGMdata& CGM_data){
+float HaloGasDensity(FLOAT R, struct CGMdata& CGM_data){
 
   if(GalaxySimulationGasHalo < 1){
     /* "zero CGM" - sets a very low density */
@@ -1629,10 +1199,10 @@ double HaloGasDensity(FLOAT R, struct CGMdata& CGM_data){
        as a function of radius given by virial theorem */
     
     double T0,haloDensity;
-    T0 = HaloGasTemperature(GalaxySimulationGasHaloScaleRadius*Mpc_cm/LengthUnits,
+    T0 = HaloGasTemperature(GalaxySimulationGasHaloScaleRadius*Mpc/LengthUnits,
 			    CGM_data);
     haloDensity = GalaxySimulationGasHaloDensity*(T0/HaloGasTemperature(R, CGM_data));
-    haloDensity /= POW((R*LengthUnits/GalaxySimulationGasHaloScaleRadius/Mpc_cm),3);
+    haloDensity /= POW((R*LengthUnits/GalaxySimulationGasHaloScaleRadius/Mpc),3);
     return min(haloDensity,GalaxySimulationGasHaloDensity);
     
   } else if(GalaxySimulationGasHalo == 2){
@@ -1644,7 +1214,7 @@ double HaloGasDensity(FLOAT R, struct CGMdata& CGM_data){
     */
     double scale_radius_cgs, this_radius_cgs, power_law_exponent;
     
-    scale_radius_cgs = GalaxySimulationGasHaloScaleRadius*Mpc_cm;
+    scale_radius_cgs = GalaxySimulationGasHaloScaleRadius*Mpc;
     this_radius_cgs = R*LengthUnits;
     power_law_exponent = -1.0*GalaxySimulationGasHaloAlpha/(Gamma-1.0);
     
@@ -1666,9 +1236,8 @@ double HaloGasDensity(FLOAT R, struct CGMdata& CGM_data){
     double scale_radius_cgs, this_radius_cgs, power_law_exponent, S_0, T_kev, n_0, this_number_density;
 
     // get radii in common set of units
-    scale_radius_cgs = GalaxySimulationGasHaloScaleRadius*Mpc_cm;
+    scale_radius_cgs = GalaxySimulationGasHaloScaleRadius*Mpc;
     this_radius_cgs = R*LengthUnits;
-    power_law_exponent = -1.0*GalaxySimulationGasHaloAlpha/(Gamma-1.0);
 
     // now get number density using expression above
 
@@ -1724,7 +1293,7 @@ double HaloGasDensity(FLOAT R, struct CGMdata& CGM_data){
    Returns:  Temperature, Kelvin
 */
 
-double HaloGasTemperature(FLOAT R, struct CGMdata& CGM_data){
+float HaloGasTemperature(FLOAT R, struct CGMdata& CGM_data){
 
   if(GalaxySimulationGasHalo < 1){
     /* "zero CGM" - sets a very low temperature */
@@ -1733,8 +1302,8 @@ double HaloGasTemperature(FLOAT R, struct CGMdata& CGM_data){
 
   } else if(GalaxySimulationGasHalo == 1){
     /* gets temperature as a function of radius given by virial theorem */
-
-    return GravConst*DarkMatterMassEnclosed(R)*mu*mh/(3.0*kboltz*R*LengthUnits);
+    printf("\n NFWDarkMatterMassEnclosed(R) = %e \n", NFWDarkMatterMassEnclosed(R));
+    return GravConst*NFWDarkMatterMassEnclosed(R)*mu*mh/(3.0*kboltz*R*LengthUnits);
     
   } else if(GalaxySimulationGasHalo == 2){
     /* assumes entropy is a power-law function of radius and T = Tvir */
@@ -1783,7 +1352,7 @@ double HaloGasTemperature(FLOAT R, struct CGMdata& CGM_data){
    with arrays of size nbins for convenience (global within this file, at least).
    Rstop is the outer boundary of the integrtation in CGS; if negative, |Rstop|*R200 is used. 
    nbins defaults to 8192. */
- void halo_init(struct CGMdata& CGM_data, grid* Grid, FLOAT Rstop, int GasHalo_override){
+ void halo_init(struct CGMdata& CGM_data, grid* Grid, float Rstop, int GasHalo_override){
 
   int halo_type=GalaxySimulationGasHalo;
   if (GasHalo_override) // not 0
@@ -1818,7 +1387,7 @@ double HaloGasTemperature(FLOAT R, struct CGMdata& CGM_data){
     // set some quantities based on user inputs; this defines our integration
     T0 = GalaxySimulationGasHaloTemperature;
     n0 = GalaxySimulationGasHaloDensity / (mu*mh);
-    r0 = GalaxySimulationGasHaloScaleRadius*Mpc_cm;
+    r0 = GalaxySimulationGasHaloScaleRadius*Mpc;
   
     // used for our numerical integration
     dr = CGM_data.dr;
@@ -1880,9 +1449,9 @@ double HaloGasTemperature(FLOAT R, struct CGMdata& CGM_data){
       index = int((this_radius - CGM_data.R_inner)/(-1.0*dr) + 1.0e-3);
 
       if(index >= 0){
-        CGM_data.n_rad[index] = this_n;
-        CGM_data.T_rad[index] = temperature;
-        CGM_data.rad[index] = this_radius;
+	CGM_data.n_rad[index] = this_n;
+	CGM_data.T_rad[index] = temperature;
+	CGM_data.rad[index] = this_radius;
       }
     }
 
@@ -1929,9 +1498,9 @@ double HaloGasTemperature(FLOAT R, struct CGMdata& CGM_data){
       // store density and temperature in the struct
       index = int((this_radius - CGM_data.R_inner)/(-1.0*dr) + 1.0e-3);
       if (index >= 0){
-        CGM_data.n_rad[index] = 2 * POW(this_press/(mu_ratio*this_ent), 1./Gamma);
-        CGM_data.T_rad[index] = POW( POW(this_press/mu_ratio, Gamma-1.) * this_ent, 1./Gamma) / kboltz;
-        CGM_data.rad[index] = this_radius;
+	CGM_data.n_rad[index] = 2 * POW(this_press/(mu_ratio*this_ent), 1./Gamma);
+	CGM_data.T_rad[index] = POW( POW(this_press/mu_ratio, Gamma-1.) * this_ent, 1./Gamma) / kboltz;
+	CGM_data.rad[index] = this_radius;
       }
     }
     
@@ -1984,12 +1553,12 @@ double HaloGasTemperature(FLOAT R, struct CGMdata& CGM_data){
       // store everything in the struct
       index = int((this_radius - CGM_data.R_inner)/dr + 1.0e-3);    
       if (index < CGM_data.nbins) {
-        CGM_data.n_rad[index] = this_dens;
-        CGM_data.T_rad[index] = this_temp;
-        CGM_data.rad[index] = this_radius;
+	CGM_data.n_rad[index] = this_dens;
+	CGM_data.T_rad[index] = this_temp;
+	CGM_data.rad[index] = this_radius;
       }
       else
-        break;
+	break;
     }
   }
     
@@ -2008,14 +1577,14 @@ double HaloGasTemperature(FLOAT R, struct CGMdata& CGM_data){
 
    Input is radius in CGS units.  output is entropy in CGS units (Kelvin cm^2) 
 */
-double halo_S_of_r(FLOAT r){
+double halo_S_of_r(double r){
 
   double Tvir, n0, r0, Smin, S0;
 
   // calculate a bunch of things based on user inputs
   Tvir = GalaxySimulationGasHaloTemperature;  // in Kelvin
   n0 = GalaxySimulationGasHaloDensity / (mu*mh);  // convert from density to electron number density (cm^-3)
-  r0 = GalaxySimulationGasHaloScaleRadius*Mpc_cm;  // scale radius in CGS
+  r0 = GalaxySimulationGasHaloScaleRadius*Mpc;  // scale radius in CGS
   Smin = GalaxySimulationGasHaloCoreEntropy/8.621738e-8;  // given in keV cm^2, converted to Kelvin cm^2
   S0 = Tvir / POW(n0,Gamma-1);  // entropy at scale radius, in units of Kelvin cm^2
 
@@ -2035,13 +1604,12 @@ double halo_S_of_r(FLOAT r){
 
 /* More complex entropy profile from Voit 2019 that requires calculation of the cooling function.
    This one returns entropy in erg cm^2 instead of K cm^2 */
-double halo_S_of_r(FLOAT r, grid* Grid){
+double halo_S_of_r(double r, grid* Grid){
   if (GalaxySimulationGasHalo == 6){
 
-#ifdef USE_GRACKLE
     double M, C, r_vir, r_max, rho_crit = 1.8788e-29*0.49;
     double vcirc2, vcirc2_max;
-    float Tgrav, Tgrav_therm;
+    double Tgrav, Tgrav_therm;
     
     M = GalaxySimulationGalaxyMass * SolarMass;  // halo total mass in CGS
     C = GalaxySimulationDMConcentration;  // concentration parameter for NFW halo
@@ -2055,10 +1623,10 @@ double halo_S_of_r(FLOAT r, grid* Grid){
     Tgrav_therm = Tgrav / TemperatureUnits / ((Gamma-1.0)*mu); // code
   
     /* Calculate the cooling function Lambda using Grackle */
-    float Lambda;
-    float dens = mh/DensityUnits; // code
-    float vx=0, vy=0, vz=0;
-    float hi, hii, hei, heii, heiii, de, hm, h2i, h2ii, di, dii, hdi, metal; // species
+    double Lambda;
+    double dens = mh/DensityUnits; // code
+    double vx=0, vy=0, vz=0;
+    double hi, hii, hei, heii, heiii, de, hm, h2i, h2ii, di, dii, hdi, metal; // species
     int dim=1;
 
     // setup_chem has densities in code, temperature in K
@@ -2090,11 +1658,7 @@ double halo_S_of_r(FLOAT r, grid* Grid){
     // TODO blend with an entropy cap
     
     return (S_nfw + S_precip);
-#else
-
-    ENZO_FAIL("Grid_GalaxySimulationInitializeGrid: GasHalo 6 requires Grackle.");
-
-#endif
+    
   } else {
     ENZO_FAIL("halo_S_of_r: GalaxySimulationGasHalo set incorrectly.");
   }  
@@ -2105,14 +1669,14 @@ double halo_S_of_r(FLOAT r, grid* Grid){
    integration. 
 
    Input is radius in CGS units; output is entropy gradient in CGS units (Kelvin*cm) */
-double halo_dSdr(FLOAT r, double n){
+double halo_dSdr(double r, double n){
 
   double Tvir, alpha, n0, r0, Smin, S0;
 
   // calculate a bunch of things based on user inputs
   Tvir = GalaxySimulationGasHaloTemperature;  // in Kelvin
   n0 = GalaxySimulationGasHaloDensity / (mu*mh);  // convert from density to electron number density (cm^-3)
-  r0 = GalaxySimulationGasHaloScaleRadius*Mpc_cm;  // scale radius in CGS
+  r0 = GalaxySimulationGasHaloScaleRadius*Mpc;  // scale radius in CGS
   Smin = GalaxySimulationGasHaloCoreEntropy/8.621738e-8;  // given in keV cm^2, converted to Kelvin cm^2
   S0 = Tvir / POW(n0,Gamma-1);  // entropy at scale radius, in units of Kelvin cm^2
 
@@ -2128,7 +1692,7 @@ double halo_dSdr(FLOAT r, double n){
 }
 
 /* a flexible, contortable sigmoid function. Gets used for log(K) */
-double sigmoid(FLOAT x, FLOAT x0, double k, double y0, double y_off) {
+double sigmoid(double x, double x0, double k, double y0, double y_off) {
   return y0 / (1 + exp(-k*(x-x0))) + y_off;
 }
 
@@ -2139,7 +1703,7 @@ double sigmoid(FLOAT x, FLOAT x0, double k, double y0, double y_off) {
    Input is radius in CGM units and electron number density in units 
    of particles per cm^-3.  Output is dn/dr in CGS units, so particles per cm^4. 
 */
-double halo_dn_dr(FLOAT r, double n){
+double halo_dn_dr(double r, double n){
   
   return -1.0*( n*1.22*mh*halo_g_of_r(r) + kboltz*POW(n,Gamma)*halo_dSdr(r,n) ) /
     ( Gamma * kboltz * halo_S_of_r(r) * POW(n, Gamma-1));
@@ -2149,7 +1713,7 @@ double halo_dn_dr(FLOAT r, double n){
 //   return -1.0 *  * 1.22*mh*n / (kboltz*T);
 // }
 
-double halo_dP_dr(FLOAT r, double P, grid* Grid) {
+double halo_dP_dr(double r, double P, grid* Grid) {
   return -1.0 * halo_mod_g_of_r(r) * 1.22*mh * POW( P/(1.1/mu) / halo_S_of_r(r,Grid),
 						    1./Gamma );
 }
@@ -2158,25 +1722,11 @@ double halo_dP_dr(FLOAT r, double P, grid* Grid) {
 
    Input is the radius in CGS units and returns the MAGNITUDE of the 
    acceleration in CGS units.  */
-double halo_g_of_r(FLOAT r){
-
-  if (DiskGravityDarkMatterUseNFW)
-    return GravConst*DarkMatterMassEnclosed(r)/(r*r);
-
-  else if (DiskGravityDarkMatterUseB95) {
-    double DMRad, DMDens;
-    DMRad = DiskGravityDarkMatterR; // in Mpc
-    DMDens = DiskGravityDarkMatterDensity; // in cgs
-
-    return pi*GravConst*DMDens*POW(DMRad*Mpc_cm,3)/POW(r,2) // NOT r^3
-            *(-2.0*atan(r/DMRad/Mpc_cm)
-              +2.0*log(1.0+r/DMRad/Mpc_cm)
-              +log(1.0+POW(r/DMRad/Mpc_cm,2))
-              );
-  }
+double halo_g_of_r(double r){
+  return GravConst*NFWDarkMatterMassEnclosed(r)/(r*r); 
 }
 
-double halo_mod_g_of_r(FLOAT r){
+double halo_mod_g_of_r(double r){
   return GravConst*halo_mod_DMmass_at_r(r)/(r*r);
 }
 
@@ -2184,7 +1734,7 @@ double halo_mod_g_of_r(FLOAT r){
    that satisfies v_circ(r) = v_circ,max = v_circ(2.163*Rs). Beyond this
    boundary radius, the enclosed mass is that of a standard NFW halo.
 */
-double halo_mod_DMmass_at_r(FLOAT r){
+double halo_mod_DMmass_at_r(double r){
 
   double M, C, R200, Rs, Rmax;
   double rho_crit = 1.8788e-29*0.49;
@@ -2197,13 +1747,15 @@ double halo_mod_DMmass_at_r(FLOAT r){
   Rmax = 2.163*Rs;
   
   if (r <= Rmax) {
-    return r / Rmax * DarkMatterMassEnclosed(Rmax);
+    return r / Rmax * NFWDarkMatterMassEnclosed(Rmax);
   }
   else {
-    return DarkMatterMassEnclosed(r);
+    return NFWDarkMatterMassEnclosed(r);
   }
 }
 
 /* -------------------- END OF Routines used for initializing the circumgalactic medium -------------------- */
+
+
 
 

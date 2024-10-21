@@ -190,8 +190,8 @@ int grid::MHD_CIDWorker(grid* OldFineGrid, FLOAT EdgeOffset[MAX_DIMENSION]){
   //If the controlling processor doesn't own the Old Subgrid, allocate space for it.
   if( MyProcessorNumber != OldFineGrid->ProcessorNumber) {
     for(field=0;field<3;field++){
-      if( OldFineGrid->MagneticField[field] != NULL )
-	fprintf(stderr, "WTF? MHD_CID, there's a magnetic field where there shouldn't be.\n");
+//  if( OldFineGrid->MagneticField[field] != NULL )
+//fprintf(stderr, "WTF? MHD_CID, there's a magnetic field where there shouldn't be.\n");
       
       int Size=1;
       for(dim=0;dim<3;dim++)
