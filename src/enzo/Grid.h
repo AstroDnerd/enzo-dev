@@ -463,6 +463,7 @@ public:
 /* Copy potential field to baryon potential for output purposes. */
 
    int CopyPotentialToBaryonField();
+   int CopyAccelerationToBaryonField();
 
 /* Baryons: Update boundary according to the external boundary values
     (for step #16) */
