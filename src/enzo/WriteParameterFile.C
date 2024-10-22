@@ -648,6 +648,8 @@ int WriteParameterFile(FILE *fptr, TopGridData &MetaData, char *name = NULL)
 	  MinimumPressureSupportParameter);
   fprintf(fptr, "RefineByJeansLengthSafetyFactor  = %"FSYM"\n",
 	  RefineByJeansLengthSafetyFactor);
+  fprintf(fptr, "UseCodeUnitsForJeansCriterion  = %"ISYM"\n",
+	  UseCodeUnitsForJeansCriterion);
   fprintf(fptr, "JeansRefinementColdTemperature  = %"FSYM"\n",
 	  JeansRefinementColdTemperature);
   fprintf(fptr, "RefineByResistiveLengthSafetyFactor  = %"FSYM"\n", 
@@ -904,6 +906,12 @@ int WriteParameterFile(FILE *fptr, TopGridData &MetaData, char *name = NULL)
 	  NumberOfParticleAttributes);
 
     /* Sink particles (for present day star formation) & winds */
+  fprintf(fptr, "SinkParticleMassThresholdSet          = %"FSYM"\n", 
+    SinkParticleMassThresholdSet);
+  fprintf(fptr, "SinkParticleMassThresholdOverflow     = %"FSYM"\n", 
+    SinkParticleMassThresholdOverflow);
+  fprintf(fptr, "SinkParticleDensityThresholdCriterion = %"ISYM"\n", 
+    SinkParticleDensityThresholdCriterion);
   fprintf(fptr, "SinkMergeDistance                     = %"FSYM"\n", 
 	  SinkMergeDistance);
   fprintf(fptr, "SinkMergeMass                         = %"FSYM"\n", 

@@ -572,6 +572,7 @@ int SetDefaultGlobalValues(TopGridData &MetaData)
   MinimumPressureJumpForRefinement = 0.33;         // As in PPM method paper
   MinimumEnergyRatioForRefinement  = 0.1;          // conservative!
   RefineByJeansLengthSafetyFactor  = 4.0;
+  UseCodeUnitsForJeansCriterion  = 0;       //Don't use code units aka use cgs
   JeansRefinementColdTemperature  = -1.0;
   RefineByResistiveLengthSafetyFactor  = 2.0;
   ShockwaveRefinementMinMach = 1.3; // Only above M=1.3
@@ -790,7 +791,10 @@ int SetDefaultGlobalValues(TopGridData &MetaData)
   ran1_init = 0;
   rand_init = 0;
 
-  SinkMergeDistance     = 1e16;
+  SinkParticleMassThresholdSet = 0.0;
+  SinkParticleMassThresholdOverflow = 1.0;
+  SinkParticleDensityThresholdCriterion = 1;
+  SinkMergeDistance     = 1e16;  //~1000 AU
   SinkMergeMass         = 0.1;
   TotalSinkMass         = 0.0;
   StellarWindFeedback   = 0;

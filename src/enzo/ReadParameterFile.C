@@ -701,6 +701,8 @@ int ReadParameterFile(FILE *fptr, TopGridData &MetaData, float *Initialdt)
 		  &MinimumPressureSupportParameter);
     ret += sscanf(line, "RefineByJeansLengthSafetyFactor = %"FSYM,
 		  &RefineByJeansLengthSafetyFactor);
+    ret += sscanf(line, "UseCodeUnitsForJeansCriterion = %"ISYM,
+		  &UseCodeUnitsForJeansCriterion);
     ret += sscanf(line, "JeansRefinementColdTemperature = %"FSYM,
 		  &JeansRefinementColdTemperature);
     ret += sscanf(line, "RefineByResistiveLengthSafetyFactor = %" FSYM,
@@ -1216,6 +1218,9 @@ int ReadParameterFile(FILE *fptr, TopGridData &MetaData, float *Initialdt)
 
 
     /* Sink particles (for present day star formation) & winds */
+    ret += sscanf(line, "SinkParticleMassThresholdSet     = %"FSYM, &SinkParticleMassThresholdSet);
+    ret += sscanf(line, "SinkParticleMassThresholdOverflow     = %"FSYM, &SinkParticleMassThresholdOverflow);
+    ret += sscanf(line, "SinkParticleDensityThresholdCriterion     = %"ISYM, &SinkParticleDensityThresholdCriterion);
     ret += sscanf(line, "SinkMergeDistance     = %"FSYM, &SinkMergeDistance);
     ret += sscanf(line, "SinkMergeMass         = %"FSYM, &SinkMergeMass);
     ret += sscanf(line, "StellarWindFeedback   = %"ISYM, &StellarWindFeedback);

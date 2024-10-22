@@ -463,7 +463,6 @@ public:
 /* Copy potential field to baryon potential for output purposes. */
 
    int CopyPotentialToBaryonField();
-   int CopyAccelerationToBaryonField();
 
 /* Baryons: Update boundary according to the external boundary values
     (for step #16) */
@@ -1609,6 +1608,15 @@ iveParticles;};
      *Count += NumberOfParticles;
    }
 
+   int ReturnNumberOfSinkParticles() {
+      int total = 0;
+      if (MyProcessorNumber == ProcessorNumber)
+         for (int n = 0; n < NumberOfParticles; n++)
+            if (ParticleType[n] == PARTICLE_TYPE_MUST_REFINE)
+               total+=1;
+      return total;
+   };
+   
   float ReturnTotalSinkMass() {
     float total = 0;
     double dx3 = CellWidth[0][0] * CellWidth[0][0] * CellWidth[0][0];

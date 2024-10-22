@@ -43,14 +43,14 @@ void ParticleMergeSmallToBig(ParticleEntry *List, const int &Size,
   /* Pick only the star particles  -- June 30 2011 Eve*/
   int starn = 0;
   for (int i = 0; i < Size; i++){
-      if (List[i].Type != PARTICLE_TYPE_DARK_MATTER)      
+      if (List[i].Type == PARTICLE_TYPE_MUST_REFINE)      
 	starn++;
   }
 
   int *star_index = new int[starn];
   int n = 0;
   for (int i = 0; i < Size; i++)
-    if (List[i].Type != PARTICLE_TYPE_DARK_MATTER)
+    if (List[i].Type == PARTICLE_TYPE_MUST_REFINE)
       star_index[n++] = i;
 
   /* Loop over star particles only -- June 30 2011 Eve */
@@ -136,7 +136,7 @@ void ParticleMergeSmallGroup(ParticleEntry *List, const int &Size,
   int NumberOfRemainingSmallParticles = 0;
   for (int i = 0; i < Size; i++){
     //if (List[i].Mass < MergeMass && Flag[i] == -1) //Jul 5 2011 Eve
-    if (List[i].Mass < MergeMass && Flag[i] == -1 && List[i].Type != PARTICLE_TYPE_DARK_MATTER)
+    if (List[i].Mass < MergeMass && Flag[i] == -1 && List[i].Type == PARTICLE_TYPE_MUST_REFINE)
       NumberOfRemainingSmallParticles++;
   }
 
@@ -151,7 +151,7 @@ void ParticleMergeSmallGroup(ParticleEntry *List, const int &Size,
   int n = 0;
   for (int i = 0; i < Size; i++)
     //if (List[i].Mass < MergeMass && Flag[i] == -1) //Jul 5 2011 Eve
-    if (List[i].Mass < MergeMass && Flag[i] == -1 && List[i].Type != PARTICLE_TYPE_DARK_MATTER)
+    if (List[i].Mass < MergeMass && Flag[i] == -1 && List[i].Type == PARTICLE_TYPE_MUST_REFINE)
       IndexArray[n++] = i;
 
   FLOAT *xp = new FLOAT[NumberOfRemainingSmallParticles];
@@ -242,6 +242,5 @@ void MergeToNewList(ParticleEntry *List, const int &Size, int *Flag,
     for (int n = 0; n < NumberOfParticleAttributes; n++)
       NewList[group].Attribute[n] = List[index].Attribute[n];
     NewList[group].Attribute[2] = dm; // reset the second one to what we calculated above
-
   }
 }

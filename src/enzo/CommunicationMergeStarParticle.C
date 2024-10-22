@@ -54,6 +54,8 @@ int CheckMergeFlagList(ParticleEntry *List, const int &Size, int *Flag, const in
 int CommunicationAllSumValues(int *Values, int Number);
 int CommunicationSyncNumberOfParticles(HierarchyEntry *GridHierarchyPointer[],
 				       int NumberOfGrids);
+int GenerateGridArray(LevelHierarchyEntry *LevelArray[], int level,
+          HierarchyEntry **Grids[]);
 float ReturnCPUTime();
 double ReturnWallTime();
 
@@ -61,21 +63,26 @@ double ReturnWallTime();
 static MPI_Datatype MPI_ParticleEntry;
 #endif
 
-int CommunicationMergeStarParticle(HierarchyEntry *Grids[],				   
-				   int NumberOfGrids)
+
+//int CommunicationMergeStarParticle(HierarchyEntry *Grids[], int NumberOfGrids)
+int CommunicationMergeStarParticle(LevelHierarchyEntry *LevelArray[], int level)
 {
+
   //printf("CommunicationMergeStarParticle running......................\n");
 #ifdef USE_MPI
   double time1 = ReturnWallTime();
 
   /* count particles on this processor */
 
-  int i, n, dim, grid;
+  int i, n, dim, grid, l;
   Eint32 ParticlesToSend = 0;
-
-  for (grid = 0; grid < NumberOfGrids; grid++) {
-    if (Grids[grid]->GridData->ReturnProcessorNumber() == MyProcessorNumber)
-      ParticlesToSend += Grids[grid]->GridData->ReturnNumberOfParticles();
+  HierarchyEntry **Grids;
+  for (l = 0; l <= level; l++){
+    int NumberOfGrids = GenerateGridArray(LevelArray, l, &Grids);
+    for (grid = 0; grid < NumberOfGrids; grid++) {
+      if (Grids[grid]->GridData->ReturnProcessorNumber() == MyProcessorNumber)
+        ParticlesToSend += Grids[grid]->GridData->ReturnNumberOfSinkParticles();
+    }
   }
 
   /* collect particle information on this processor */
@@ -87,14 +94,17 @@ int CommunicationMergeStarParticle(HierarchyEntry *Grids[],
     SendList = new ParticleEntry[ParticlesToSend];
 
     int c = 0;
-    for (grid = 0; grid < NumberOfGrids; grid++) {
-      if (Grids[grid]->GridData->ReturnProcessorNumber() == MyProcessorNumber) {
-	int np = Grids[grid]->GridData->ReturnParticleEntry(&SendList[c]);
-	c += np;
+    for (l = 0; l <= level; l++){
+      int NumberOfGrids = GenerateGridArray(LevelArray, l, &Grids);
+      for (grid = 0; grid < NumberOfGrids; grid++) {
+        if (Grids[grid]->GridData->ReturnProcessorNumber() == MyProcessorNumber) {
+          int np = Grids[grid]->GridData->ReturnParticleEntry(&SendList[c]);
+          c += np;
+        }
       }
     }
-
   }
+
 
   //for (i = 0; i < count; i++)
   //printf("P(%"ISYM"): %"ISYM" %"GSYM" %"GSYM" %"GSYM" %"GSYM" \n", MyProcessorNumber,
@@ -168,7 +178,7 @@ int CommunicationMergeStarParticle(HierarchyEntry *Grids[],
     }
   }
   */
-  //  printf("\n CMSP: SinkMergeDistance = %"GSYM", SinkMergeMass = %"GSYM", MassUnits = %"GSYM"\n \n",
+  // printf("\n CMSP: SinkMergeDistance = %"GSYM", SinkMergeMass = %"GSYM", MassUnits = %"GSYM"\n \n",
   //	 SinkMergeDistance, SinkMergeMass, MassUnits); 
 
 
@@ -180,30 +190,30 @@ int CommunicationMergeStarParticle(HierarchyEntry *Grids[],
   /* first, merge small particles to big ones */
   //printf("Merge small particles to big ones \n");
   ParticleMergeSmallToBig(SharedList, NumberOfSharedParticles, 
-			  SinkMergeMass/MassUnits, SinkMergeDistance, 
+			  SinkMergeMass, SinkMergeDistance, 
 			  MergeFlagList, NumberOfGroups);
 
   /* second, group small particles using FOF and merge */
   //printf("Merge small particles together \n");
   ParticleMergeSmallGroup(SharedList, NumberOfSharedParticles, 
-			  SinkMergeMass/MassUnits, SinkMergeDistance,
+			  SinkMergeMass, SinkMergeDistance,
 			  MergeFlagList, NumberOfGroups);
 
   /* delete merged old particles */
-  //printf("Delete old particles \n");
-  for (grid = 0; grid < NumberOfGrids; grid++) {
-    if (Grids[grid]->GridData->ReturnProcessorNumber() == MyProcessorNumber) {
-      Grids[grid]->GridData->RemoveMergedParticles(SharedList, NumberOfSharedParticles, 
-						   MergeFlagList);
-      Grids[grid]->GridData->CleanUpMovedParticles();
+  for (l = 0; l <= level; l++){
+    int NumberOfGrids = GenerateGridArray(LevelArray, l, &Grids);
+    for (grid = 0; grid < NumberOfGrids; grid++) {
+      if (Grids[grid]->GridData->ReturnProcessorNumber() == MyProcessorNumber) {
+        Grids[grid]->GridData->RemoveMergedParticles(SharedList, NumberOfSharedParticles, 
+  						   MergeFlagList);
+        Grids[grid]->GridData->CleanUpMovedParticles();
+      }
     }
   }
-
   /* create a list of merged new particles */
 
   ParticleEntry *NewList = new ParticleEntry[NumberOfGroups];
   MergeToNewList(SharedList, NumberOfSharedParticles, MergeFlagList, NumberOfGroups, NewList);
-
   /* add new merged particles to the grids */
   
   int *PartialAdded = new int[NumberOfGroups]; // flag whether a group is merged
@@ -218,23 +228,31 @@ int CommunicationMergeStarParticle(HierarchyEntry *Grids[],
     DomainWidth[dim] = DomainRightEdge[dim] - DomainLeftEdge[dim];
   for (i = 0; i < NumberOfGroups; i++)
     for (dim = 0; dim < MAX_DIMENSION; dim++) {
-      if (NewList[i].Position[dim] < DomainLeftEdge[dim])
-	NewList[i].Position[dim] += DomainWidth[dim];
-      else if (NewList[i].Position[dim] > DomainRightEdge[dim])
-	NewList[i].Position[dim] -= DomainWidth[dim];
+      if (NewList[i].Position[dim] < DomainLeftEdge[dim]){
+        //printf("For Group: %d, %d Position %g changed to %g.\n",NewList[i].Number,dim,NewList[i].Position[dim],NewList[i].Position[dim]+DomainWidth[dim]);
+	      NewList[i].Position[dim] += DomainWidth[dim];
+      }
+      else if (NewList[i].Position[dim] > DomainRightEdge[dim]){
+        //printf("For Group: %d, %d Position %g changed to %g.\n",NewList[i].Number,dim,NewList[i].Position[dim],NewList[i].Position[dim]-DomainWidth[dim]);
+	      NewList[i].Position[dim] -= DomainWidth[dim];
+      }
     }
-
-  for (grid = 0; grid < NumberOfGrids; grid++)
-    if (Grids[grid]->GridData->ReturnProcessorNumber() == MyProcessorNumber)
-      Grids[grid]->GridData->AddParticlesFromList(NewList, NumberOfGroups, PartialAdded);
-
+  for (l = 0; l <= level; l++){
+    if (l = level){
+      int NumberOfGrids = GenerateGridArray(LevelArray, l, &Grids);
+      for (grid = 0; grid < NumberOfGrids; grid++)
+        if (Grids[grid]->GridData->ReturnProcessorNumber() == MyProcessorNumber)
+          Grids[grid]->GridData->AddParticlesFromList(NewList, NumberOfGroups, PartialAdded);
+      }
+  }
   /* communicate to check whether all the particles are added */
 
   MPI_Allreduce(PartialAdded, TotalAdded, NumberOfGroups, IntDataType, MPI_SUM, MPI_COMM_WORLD);
 
   int total = 0;
-  for (i = 0; i < NumberOfGroups; i++)
+  for (i = 0; i < NumberOfGroups; i++){
     total += TotalAdded[i];
+  }
 
   int Rank, closest, Dims[MAX_DIMENSION];
   FLOAT Left[MAX_DIMENSION], Right[MAX_DIMENSION];
@@ -244,61 +262,49 @@ int CommunicationMergeStarParticle(HierarchyEntry *Grids[],
     if (debug)
       printf("CommunicationMergeParticle: total %"ISYM" != NumberOfGroups %"ISYM"\n", 
 	     total, NumberOfGroups);
+      
     for (i = 0; i < NumberOfGroups; i++) {
       if (!TotalAdded[i]) {
-	float v = sqrt(pow(NewList[i].Velocity[0],2) + pow(NewList[i].Velocity[1],2) +
+	      float v = sqrt(pow(NewList[i].Velocity[0],2) + pow(NewList[i].Velocity[1],2) +
 		       pow(NewList[i].Velocity[2],2));
-	if (debug) {
-	  printf("Group %"ISYM" failed to be added.\n", NewList[i].Number);
-	  printf("m=%"GSYM", x=(%"GSYM", %"GSYM", %"GSYM"), v=%"GSYM"\n", 
-		 NewList[i].Mass*MassUnits, NewList[i].Position[0],
-		 NewList[i].Position[1], NewList[i].Position[2], v*VelocityUnits/1e5);
-	}
-	found = false;
-	for (grid = 0; grid < NumberOfGrids; grid++)
-	  found |= Grids[grid]->GridData->CheckGridBoundaries(NewList[i].Position);
-	if (!found) {
-	  if (debug)
-	    printf("Inserting merged particle into nearest grid.  RebuildHierarchy will place it\n"
-		   "into the correct grid in the next call.\n");
-	  closest = 0;
-	  r2min = huge_number;
-	  for (grid = 0; grid < NumberOfGrids; grid++) {
-	    Grids[grid]->GridData->ReturnGridInfo(&Rank, Dims, Left, Right);
-	    r2 = 0;
-	    for (dim = 0; dim < MAX_DIMENSION; dim++) {
-	      dx[dim] = 0.5*(Left[dim] + Right[dim]) - NewList[i].Position[dim];
-	      r2 += dx[dim] * dx[dim];
-	    }
-	    if (r2 < r2min) {
-	      r2min = r2;
-	      closest = grid;
-	    }
-	  } // ENDFOR grids
-	  if (debug) {
-	    Grids[closest]->GridData->ReturnGridInfo(&Rank, Dims, Left, Right);
-	    printf("Adding particle to grid %"ISYM"\n"
-		   "left edge  = %"GOUTSYM" %"GOUTSYM" %"GOUTSYM"\n"
-		   "right edge = %"GOUTSYM" %"GOUTSYM" %"GOUTSYM"\n",		   
-		   closest, Left[0], Left[1], Left[2],
-		   Right[0], Right[1], Right[2]);
-	  }
-	  Grids[closest]->GridData->AddOneParticleFromList(NewList, i);
-	} // ENDIF !found
-
-	  /* if this is a small problem, ignore it */
-//	  if (NewList[i].Mass*MassUnits > 0.1) {
-//	    CheckMergeFlagList(SharedList, NumberOfSharedParticles, MergeFlagList, NumberOfGroups, MassUnits);      
-//	    return FAIL;
-//	  }
+	      if (debug) {
+          printf("Group %"ISYM" failed to be added.\n", NewList[i].Number);
+          printf("m=%"GSYM", x=(%"GSYM", %"GSYM", %"GSYM"), v=%"GSYM"\n", 
+          NewList[i].Mass*MassUnits, NewList[i].Position[0],
+          NewList[i].Position[1], NewList[i].Position[2], v);
+        }
+        for (l = level-1; l >=0; l--){
+          int NumberOfGrids = GenerateGridArray(LevelArray, l, &Grids);
+          found = false;
+          for (grid = 0; grid < NumberOfGrids; grid++){
+            found = Grids[grid]->GridData->CheckGridBoundaries(NewList[i].Position);
+            if (found) {
+              if (debug) {
+                Grids[grid]->GridData->ReturnGridInfo(&Rank, Dims, Left, Right);
+                printf("Inserting merged particle into grid %d in the next lower resolution level %d.\n"
+                "left edge  = %"GOUTSYM" %"GOUTSYM" %"GOUTSYM"\n right edge = %"GOUTSYM" %"GOUTSYM" %"GOUTSYM"\n",		   
+                grid, l, Left[0], Left[1], Left[2],Right[0], Right[1], Right[2]);
+              }
+              Grids[grid]->GridData->AddOneParticleFromList(NewList, i);
+              //Group added, now end the loop
+              grid = NumberOfGrids;
+              l = -1;
+            } //ENDIF found
+          } // ENDFOR grids
+          
+          
+        } // ENDFOR level
       } // ENDIF !TotalAdded
-      
-      //CheckMergeFlagList(SharedList, NumberOfSharedParticles, MergeFlagList, NumberOfGroups, MassUnits);      
-    }
+    } //ENDFOR Groups
   }
 
-  CommunicationSyncNumberOfParticles(Grids, NumberOfGrids);
+  for (l = 0; l <= level; l++){
+    int NumberOfGrids = GenerateGridArray(LevelArray, l, &Grids);
+    CommunicationSyncNumberOfParticles(Grids, NumberOfGrids);
+  }
 
+
+  delete [] Grids;
   delete [] PartialAdded;
   delete [] TotalAdded;
   delete [] SendList;

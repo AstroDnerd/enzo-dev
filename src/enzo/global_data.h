@@ -655,6 +655,11 @@ EXTERN float MinimumEnergyRatioForRefinement;
 
 EXTERN float RefineByJeansLengthSafetyFactor;
 
+/* For CellFlaggingMethod = 6 and Sink Particle Creation,
+   Do jeans length calculation in cgs units or code units. */
+
+EXTERN int UseCodeUnitsForJeansCriterion;
+
 /* If > 0, this will be used instead of the temperature at all locations */
 
 EXTERN float JeansRefinementColdTemperature;
@@ -926,6 +931,9 @@ EXTERN int PoissonBoundaryType;
 /* Star Particle paramters */
 
 EXTERN int ShiningParticleID;
+EXTERN float SinkParticleMassThresholdSet;
+EXTERN float SinkParticleMassThresholdOverflow;
+EXTERN int SinkParticleDensityThresholdCriterion;
 EXTERN float SinkMergeDistance;
 EXTERN float SinkMergeMass;
 EXTERN float TotalSinkMass;
